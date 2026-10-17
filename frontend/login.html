@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>會員登入｜海大校園交易</title><link rel="stylesheet" href="/auth.css"><script type="module" src="/javascripts/auth/login.js"></script></head>
+<body>
+<header><a class="brand" href="/">海大<span>校園交易</span></a><span class="badge">軟工專題 · 本機展示</span></header>
+<main class="login-layout">
+<section class="intro"><div class="eyebrow">NTOU CAMPUS MARKET</div><h1>好物，<br>在校園繼續生活。</h1><p>從一本課本到一副耳機，<br>讓閒置物品遇見需要它的同學。</p><div class="intro-bottom"><span class="wave">≈</span>海大學生與教職員的交易空間</div></section>
+<section class="login-card" aria-labelledby="loginTitle"><span class="eyebrow">WELCOME BACK</span><h2 id="loginTitle">登入會員</h2><p class="sub">登入後，開始探索校園好物。</p>
+<form id="loginForm"><label for="account">帳號</label><input id="account" name="account" autocomplete="username" placeholder="請輸入帳號" maxlength="100" required>
+<div class="label-row"><label for="password">密碼</label><button id="togglePassword" class="text-button" type="button" aria-controls="password" aria-pressed="false">顯示密碼</button></div>
+<input id="password" name="password" type="password" autocomplete="current-password" placeholder="請輸入密碼" maxlength="72" required>
+<p id="error" class="error" role="alert" hidden></p><button id="submit" class="primary" type="submit">登入 <span aria-hidden="true">→</span></button></form>
+<aside class="demo"><strong>展示模式測試帳密</strong><p>帳號 <code>demo</code> ／ 密碼 <code>Campus123!</code></p><button id="fillDemo" class="text-button" type="button">填入測試帳密</button></aside>
+<p class="fine">目前提供測試會員，尚未開放註冊。</p>
+</section></main><footer>海大校園交易 · 課程專題展示</footer>
+</body></html>
