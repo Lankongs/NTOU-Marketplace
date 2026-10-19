@@ -21,7 +21,7 @@ function addCards(productData) {
 
   // 4. 動態在畫面上產生一張 Bootstrap 卡片
   const cardElement = document.createElement("div");
-  cardElement.className = "card m-2 shadow-sm";
+  cardElement.className = "card m-2 shadow-sm col";
   cardElement.style.width = "18rem";
   cardElement.innerHTML = `
         ${

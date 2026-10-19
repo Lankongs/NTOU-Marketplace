@@ -16,55 +16,108 @@
   </head>
   <body>
     <!--頂層欄位-->
-    <div>
-      <div>
-        <input type="text" placeholder="關鍵字" required />
-        <button type="submit">送出</button>
+
+    <nav
+      class="navbar navbar-expand-lg navbar-light py-2"
+      style="background-color: #e3f2fd"
+    >
+      <div class="container-fluid">
+        <div class="d-flex align-items-center gap-2 px-2">
+          <!-- 搜尋表單 -->
+          <div class="input-group py-2">
+            <input type="text" class="form-control" placeholder="關鍵字" />
+            <button class="btn btn-info" type="submit">送出</button>
+          </div>
+
+          <!-- 篩選按鈕（可搭配下拉選單或彈窗） -->
+          <div class="dropdown">
+            <button
+              class="btn btn-outline-dark dropdown-toggle"
+              type="button"
+              id="filterDropdown"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              篩選
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+              <li><a class="dropdown-item" href="#">依日期排序</a></li>
+              <li><a class="dropdown-item" href="#">依熱門度</a></li>
+              <li><hr class="dropdown-divider" /></li>
+              <li><a class="dropdown-item" href="#">進階篩選...</a></li>
+            </ul>
+          </div>
+        </div>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarContent"
+          aria-controls="navbarContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarContent">
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
+            <li class="nav-item">
+              <button type="button" id="filter-button" class="btn">
+                <img src="image/filter.png" alt="篩選" width="20" height="20" />
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="notify-button" class="btn">
+                <img src="image/bell.png" alt="通知" width="20" height="20" />
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="shopping-cart-button" class="btn">
+                <img
+                  src="image/shopping-cart.png"
+                  alt="購物車"
+                  width="20"
+                  height="20"
+                />
+                購物車
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="list-products-button" class="btn">
+                <img
+                  src="image/edit.png"
+                  alt="刊登商品"
+                  width="20"
+                  height="20"
+                />
+                刊登商品
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="user-button"
+                class="btn"
+                aria-label="會員登入"
+              >
+                <img
+                  src="image/account.png"
+                  alt="使用者"
+                  width="20"
+                  height="20"
+                />
+                <span id="member-label">登入</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" id="logout-button" class="btn" hidden>
+                登出
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
-      <div>
-        <ul>
-          <li>
-            <button type="button" id="filter-button" class="btn">
-              <img src="image/filter.png" alt="篩選" width="20" height="20" />
-            </button>
-          </li>
-          <li>
-            <button type="button" id="notify-button" class="btn">
-              <img src="image/bell.png" alt="通知" width="20" height="20" />
-            </button>
-          </li>
-          <li>
-            <button type="button" id="shopping-cart-button" class="btn">
-              <img
-                src="image/shopping-cart.png"
-                alt="購物車"
-                width="20"
-                height="20"
-              />
-              購物車
-            </button>
-          </li>
-          <li>
-            <button type="button" id="list-products-button" class="btn">
-              <img src="image/edit.png" alt="刊登商品" width="20" height="20" />
-              刊登商品
-            </button>
-          </li>
-          <li>
-            <button type="button" id="user-button" class="btn" aria-label="會員登入">
-              <img
-                src="image/account.png"
-                alt="使用者"
-                width="20"
-                height="20"
-              />
-              <span id="member-label">登入</span>
-            </button>
-          </li>
-        <li><button type="button" id="logout-button" class="btn" hidden>登出</button></li>
-        </ul>
-      </div>
-    </div>
+    </nav>
 
     <p id="auth-message" role="alert" hidden></p>
     <!--主頁內容-->
@@ -82,7 +135,12 @@
           </ul>
         </nav>
       </div>
-      <div id="cards-lists-area"></div>
+      <div class="container-right">
+        <div
+          class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3"
+          id="cards-lists-area"
+        ></div>
+      </div>
     </div>
   </body>
 </html>

@@ -1,60 +1,69 @@
-header{
-    background-color: #8B8680;
-    height: 80px;
-    width: 100%;
-    position: relative;
+#main-area {
+  display: flex;
+  min-height: calc(100vh - 60px); /* 扣除 navbar 高度，不足一屏時撐滿一屏 */
+  align-items: stretch; /* 讓左側高度與右側內容等高延伸 */
 }
 
-header a{
-    color: black;
-    text-decoration: none;
+header {
+  background-color: #8b8680;
+  height: 80px;
+  width: 100%;
+  position: relative;
 }
 
-header ul{
-    position: absolute;
-    right: 5vw;
-    top: 0;
-    line-height: 80px;
+header a {
+  color: black;
+  text-decoration: none;
 }
 
-header form{
-    position: absolute;
-    left: 60px;
-    top:0;
-    line-height: 80px;
+header ul {
+  position: absolute;
+  right: 5vw;
+  top: 0;
+  line-height: 80px;
 }
 
-header li{
-    display: inline;
-    margin-right: 5vw;
+header form {
+  position: absolute;
+  left: 60px;
+  top: 0;
+  line-height: 80px;
 }
 
-.container_all{
-    display: flex;
-    align-items: stretch;
+header li {
+  display: inline;
+  margin-right: 5vw;
 }
 
-.container_left{
-    width: 250px;
-    height: 100vh;
-    background-color: #ad966e;
+.container_all {
+  display: flex;
+  align-items: stretch;
 }
 
-.sidebar p{
-    text-align: center;
-    font-size: 25px;
+/* 左側側邊欄：固定寬度、不被壓縮、隨內容向下無限延伸 */
+.container_left {
+  width: 250px;
+  flex-shrink: 0; /* 防止被右側擠壓變形 */
+  background-color: #ad966e;
+  min-height: 100%; /* 隨著父容器等高延伸至底部 */
 }
 
-.sidebar ul li a{
-    display: block;
-    text-decoration: none;
-    color: black;
-    padding: 5px;
-    font-size: 20px;
+.sidebar p {
+  text-align: center;
+  font-size: 25px;
 }
 
-.container_right{
-    background-color: #928d8546;
-    width: 100%;
-    height: 100vh;
+.sidebar ul li a {
+  display: block;
+  text-decoration: none;
+  color: black;
+  padding: 5px;
+  font-size: 20px;
+}
+
+/* 右側商品卡片區域：佔滿剩餘的所有寬度 */
+.container_right {
+  flex-grow: 1; /* 自動填滿剩餘寬度 */
+  padding: 20px;
+  background-color: #f8f9fa;
 }
