@@ -12,6 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="./javascripts/mainArea/cardsList.js"></script>
     <script type="module" src="./javascripts/topArea/listProducts.js"></script>
+    <script type="module" src="./javascripts/auth/member.js"></script>
   </head>
   <body>
     <!--頂層欄位-->
@@ -50,19 +51,22 @@
             </button>
           </li>
           <li>
-            <button type="button" id="user-button" class="btn">
+            <button type="button" id="user-button" class="btn" aria-label="會員登入">
               <img
                 src="image/account.png"
                 alt="使用者"
                 width="20"
                 height="20"
               />
+              <span id="member-label">登入</span>
             </button>
           </li>
+        <li><button type="button" id="logout-button" class="btn" hidden>登出</button></li>
         </ul>
       </div>
     </div>
 
+    <p id="auth-message" role="alert" hidden></p>
     <!--主頁內容-->
     <!--預想中這裡只放側邊的分類跟商品卡，供參-->
     <div id="main-area">
