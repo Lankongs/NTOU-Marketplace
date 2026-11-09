@@ -35,16 +35,10 @@ header li {
   margin-right: 5vw;
 }
 
-.container_all {
-  display: flex;
-  align-items: stretch;
-}
-
 /* 左側側邊欄：固定寬度、不被壓縮、隨內容向下無限延伸 */
-.container_left {
+.container-left {
   width: 250px;
   flex-shrink: 0; /* 防止被右側擠壓變形 */
-  background-color: #ad966e;
   min-height: 100%; /* 隨著父容器等高延伸至底部 */
 }
 
@@ -62,8 +56,7 @@ header li {
 }
 
 /* 右側商品卡片區域：佔滿剩餘的所有寬度 */
-.container_right {
+.container-right {
   flex-grow: 1; /* 自動填滿剩餘寬度 */
   padding: 20px;
-  background-color: #f8f9fa;
 }

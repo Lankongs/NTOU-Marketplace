@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>刊登商品</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Bootstrap 5 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="./javascripts/topArea/listProducts.js"></script>
+    <script type="module" src="./javascripts/auth/member.js"></script>
+  </head>
+  <body>
+    <!--頂層欄位-->
+
+    <nav
+      class="navbar navbar-expand-lg py-2"
+      style="background-color: #d5eeff"
+    >
+      <div class="container-fluid">
+        <div class="d-flex align-items-center gap-2">
+          <!-- 主頁按鈕 -->
+          <button type="button" id="to-home" class="btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-house-door" viewBox="0 0 16 16">
+              <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4z"/>
+            </svg>
+          </button>
+          <!-- 搜尋表單 -->
+          <div class="input-group py-2">
+            <input type="text" class="form-control" placeholder="關鍵字" />
+            <button class="btn btn-secondary" type="submit">送出</button>
+          </div>
+
+          <!-- 篩選按鈕（可搭配下拉選單或彈窗） -->
+          <div class="dropdown">
+            <button
+              class="btn btn-outline-dark dropdown-toggle"
+              type="button"
+              id="filterDropdown"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              篩選
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+              <li><a class="dropdown-item" href="#">依日期排序</a></li>
+              <li><a class="dropdown-item" href="#">依熱門度</a></li>
+              <li><hr class="dropdown-divider" /></li>
+              <li><a class="dropdown-item" href="#">進階篩選...</a></li>
+            </ul>
+          </div>
+        </div>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarContent"
+          aria-controls="navbarContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarContent">
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
+            <li class="nav-item">
+              <button type="button" id="filter-button" class="btn">
+                <img src="image/filter.png" alt="篩選" width="20" height="20" />
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="notify-button" class="btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
+                  <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6"/>
+                </svg>
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="shopping-cart-button" class="btn">
+                <img
+                  src="image/shopping-cart.png"
+                  alt="購物車"
+                  width="20"
+                  height="20"
+                />
+                購物車
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="list-products-button" class="btn">
+                <img
+                  src="image/edit.png"
+                  alt="刊登商品"
+                  width="20"
+                  height="20"
+                />
+                刊登商品
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="user-button"
+                class="btn"
+                aria-label="會員登入"
+              >
+                <img
+                  src="image/account.png"
+                  alt="使用者"
+                  width="20"
+                  height="20"
+                />
+                <span id="member-label">登入</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" id="logout-button" class="btn" hidden>
+                登出
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <p id="auth-message" role="alert" hidden></p>
+
+    <!-- 刊登商品表單區塊（保留原 listProducts.js 的相同 Tag 結構） -->
+    <div id="product-form-area">
+      <div class="container mt-4 mb-5" style="max-width: 90%;">
+        <div class="card shadow-sm">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h3 class="card-title mb-0">刊登商品</h3>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-button">
+                ← 返回主頁
+              </button>
+            </div>
+
+            <!-- 模式切換按鈕（預設直購） -->
+            <div class="mb-4 text-center">
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="listingType" id="type-direct" value="direct" checked>
+                <label class="btn btn-outline-primary" for="type-direct">直購模式</label>
+
+                <input type="radio" class="btn-check" name="listingType" id="type-auction" value="auction">
+                <label class="btn btn-outline-primary" for="type-auction">競標模式</label>
+              </div>
+            </div>
+
+            <form id="product-listing-form">
+              <!-- 【共用欄位】名稱、照片、介紹 -->
+              <div class="mb-3">
+                <label for="prod-name" class="form-label">商品名稱 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="prod-name" placeholder="請輸入商品名稱" required>
+              </div>
+
+              <div class="mb-3">
+                <label for="prod-image" class="form-label">商品照片</label>
+                <input type="file" class="form-control" id="prod-image" accept="image/*">
+              </div>
+
+              <div class="mb-3">
+                <label for="prod-desc" class="form-label">商品介紹</label>
+                <textarea class="form-control" id="prod-desc" rows="3" placeholder="請填寫詳細介紹"></textarea>
+              </div>
+
+              <!-- 【共用欄位】商品分類標籤（可複選） -->
+              <div class="mb-3">
+                <label class="form-label d-block">商品標籤（可複選） <span class="text-danger">*</span></label>
+                <div class="d-flex flex-wrap gap-2" id="prod-tags-group">
+                  <input type="checkbox" class="btn-check" name="prodTags" id="tag-entertainment" value="娛樂" autocomplete="off">
+                  <label class="btn btn-outline-secondary btn-sm" for="tag-entertainment">娛樂</label>
+
+                  <input type="checkbox" class="btn-check" name="prodTags" id="tag-sports" value="運動" autocomplete="off">
+                  <label class="btn btn-outline-secondary btn-sm" for="tag-sports">運動</label>
+
+                  <input type="checkbox" class="btn-check" name="prodTags" id="tag-clothing" value="服飾" autocomplete="off">
+                  <label class="btn btn-outline-secondary btn-sm" for="tag-clothing">服飾</label>
+
+                  <input type="checkbox" class="btn-check" name="prodTags" id="tag-makeup" value="彩妝" autocomplete="off">
+                  <label class="btn btn-outline-secondary btn-sm" for="tag-makeup">彩妝</label>
+
+                  <input type="checkbox" class="btn-check" name="prodTags" id="tag-electronics" value="電子" autocomplete="off">
+                  <label class="btn btn-outline-secondary btn-sm" for="tag-electronics">電子</label>
+                </div>
+                <div id="tags-error" class="text-danger small mt-1" hidden>請至少選擇一個商品標籤。</div>
+              </div>
+
+              <!-- 【動態插槽】：只有被選中的模式欄位才會渲染進來 -->
+              <div id="dynamic-fields"></div>
+
+              <!-- 【共用欄位】運送方式 -->
+              <div class="mb-4">
+                <label for="prod-shipping" class="form-label">運送方式 <span class="text-danger">*</span></label>
+                <select class="form-select" id="prod-shipping" required>
+                  <option value="" disabled selected>請選擇運送方式</option>
+                  <option value="校內面交">校內面交</option>
+                  <option value="超商取貨 (7-11 / 全家)">超商取貨 (7-11 / 全家)</option>
+                  <option value="郵寄包裹">郵寄包裹</option>
+                </select>
+              </div>
+
+              <div class="d-flex justify-content-end gap-2">
+                <button type="submit" class="btn btn-primary px-4">確認刊登</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
