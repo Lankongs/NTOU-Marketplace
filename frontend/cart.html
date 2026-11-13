@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>購物車 - NTOU Marketplace</title>
+
+    <!-- 與首頁共用的樣式和 Bootstrap -->
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <link rel="stylesheet" href="./css/cart.css" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="./javascripts/mainArea/cart.js"></script>
+  </head>
+
+  <body class="ntou-cart-page">
+    <!-- 頂層欄位：與新版 index.html 同樣的結構、ID 和淺藍色 -->
+    <nav class="navbar navbar-expand-lg py-2" style="background-color: #d5eeff">
+      <div class="container-fluid">
+        <div class="d-flex align-items-center gap-2">
+          <!-- 主頁按鈕 -->
+          <button type="button" id="to-home" class="btn" title="回首頁">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-house-door" viewBox="0 0 16 16">
+              <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4z" />
+            </svg>
+          </button>
+
+          <!-- 搜尋表單：目前點擊後先返回首頁，未來可串接商品搜尋 -->
+          <div class="input-group py-2">
+            <input id="cart-search" type="text" class="form-control" placeholder="關鍵字" aria-label="商品搜尋" />
+            <button id="cart-search-button" class="btn btn-secondary" type="button">送出</button>
+          </div>
+
+          <!-- 篩選下拉選單：與首頁保留相同外觀 -->
+          <div class="dropdown">
+            <button
+              class="btn btn-outline-dark dropdown-toggle"
+              type="button"
+              id="filterDropdown"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              篩選
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+              <li><a class="dropdown-item" href="#">依日期排序</a></li>
+              <li><a class="dropdown-item" href="#">依熱門度</a></li>
+              <li><hr class="dropdown-divider" /></li>
+              <li><a class="dropdown-item" href="#">進階篩選...</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 小螢幕導覽列展開按鈕 -->
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarContent"
+          aria-controls="navbarContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- 右上導覽列按鈕 -->
+        <div class="collapse navbar-collapse" id="navbarContent">
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
+            <li class="nav-item">
+              <button type="button" id="filter-button" class="btn">
+                <img src="image/filter.png" alt="篩選" width="20" height="20" />
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="notify-button" class="btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
+                  <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6" />
+                </svg>
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="shopping-cart-button" class="btn">
+                <img src="image/shopping-cart.png" alt="購物車" width="20" height="20" />
+                購物車
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="list-products-button" class="btn">
+                <img src="image/edit.png" alt="刊登商品" width="20" height="20" />
+                刊登商品
+              </button>
+            </li>
+            <li>
+              <button type="button" id="user-button" class="btn" aria-label="會員登入">
+                <img src="image/account.png" alt="使用者" width="20" height="20" />
+                <span id="member-label">登入</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" id="logout-button" class="btn" hidden>登出</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <p id="auth-message" role="alert" hidden></p>
+
+    <!-- 購物車主要內容：參考刊登頁的白色卡片與 Bootstrap 細邊框 -->
+    <main class="container-fluid cart-page-content py-4 px-md-5">
+      <div class="cart-content-panel bg-white border rounded-3 p-3 p-md-4">
+        <!-- 頁面標題 -->
+        <div class="cart-heading d-flex justify-content-between align-items-center gap-3 flex-wrap border-bottom pb-3 mb-4">
+          <h1 class="fw-bold mb-0">
+            購物車
+            <span class="cart-title-count" id="cart-item-count">0 件商品</span>
+          </h1>
+          <a href="./index.html" class="btn btn-outline-secondary btn-sm">← 返回主頁</a>
+        </div>
+
+        <!-- 購物車提示訊息 -->
+        <div id="cart-notice" class="alert alert-info" role="status" hidden></div>
+
+        <!-- 購物車商品區與右側訂單摘要 -->
+        <div class="cart-columns">
+          <section class="cart-list-column" aria-label="購物車商品">
+            <!-- 全選商品與賣家數 -->
+            <div id="cart-list-toolbar" class="cart-list-toolbar">
+              <label class="cart-checkbox-label" for="cart-select-all-top">
+                <input type="checkbox" id="cart-select-all-top" />
+                <span>全選商品</span>
+              </label>
+              <span id="cart-seller-summary">0 個賣家</span>
+            </div>
+
+            <!-- 購物車商品位置：cart.js 會依照賣家動態產生商品卡 -->
+            <div id="cart-seller-groups"></div>
+
+            <!-- 沒有購物車商品時的畫面 -->
+            <section id="cart-empty" class="cart-empty" hidden>
+              <i class="bi bi-bag fs-1 text-secondary"></i>
+              <h2 class="fs-5 fw-bold mt-3">開始購物吧</h2>
+              <a href="./index.html" class="btn btn-primary mt-3">前往商品列表</a>
+            </section>
+          </section>
+
+          <!-- 訂單摘要：只計算已勾選的有效商品 -->
+          <aside class="cart-summary" aria-label="購物明細">
+            <h2>訂單摘要</h2>
+            <div class="cart-summary-row">
+              <span>已選商品</span>
+              <strong id="cart-selected-count">0 件</strong>
+            </div>
+            <div class="cart-summary-row">
+              <span>商品小計</span>
+              <strong id="cart-subtotal">NT$ 0</strong>
+            </div>
+            <div class="cart-summary-note">此階段只計算商品小計，尚未包含運費與優惠券。</div>
+            <div class="cart-summary-total">
+              <span>合計</span>
+              <strong id="cart-total">NT$ 0</strong>
+            </div>
+            <!-- 下單按鈕：正式訂單 API 尚未完成 -->
+            <button id="cart-checkout" class="cart-checkout" type="button" disabled>
+              下單（功能開發中）
+            </button>
+          </aside>
+        </div>
+
+        <!-- 測試畫面：使用 cart.html?demo=1 預覽商品 -->
+        <div id="cart-preview-hint" class="cart-preview-hint" hidden>
+          <span>示範模式：商品不會存入正式資料庫。</span>
+          <button type="button" id="cart-reset-demo">重設示範</button>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
