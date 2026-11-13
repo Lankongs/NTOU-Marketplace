@@ -17,6 +17,17 @@ function init() {
     });
   }
 
+  // 頂層「會員按鈕」：若已登入（登出按鈕可見），點擊跳轉至 selfPage.html
+  const userButton = document.getElementById("user-button");
+  const logoutButton = document.getElementById("logout-button");
+  if (userButton) {
+    userButton.addEventListener("click", () => {
+      if (logoutButton && !logoutButton.hidden) {
+        window.location.assign("./selfPage.html");
+      }
+    });
+  }
+
   // 若當前頁面存在 #product-form-area（即位於 addProducts.html），初始化表單邏輯
   const formArea = document.getElementById("product-form-area");
   if (formArea) {
@@ -104,6 +115,7 @@ function initProductForm(formArea) {
       shipping: document.getElementById("prod-shipping").value,
       image: imageUrl,
       tags: allTags,
+      status: "active", // active: 販售中, delisted: 已下架
     };
 
     // 4. 根據模式收集專屬欄位

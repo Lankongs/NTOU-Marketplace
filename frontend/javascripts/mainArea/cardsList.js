@@ -1,12 +1,12 @@
 const STORAGE_KEY = "ntou_marketplace_cards";
-let currentCategory = "推薦";
+const CURRENT_CATEGORY = "last_page";
 
 function normalizeCardTags(card) {
   if (Array.isArray(card.tags) && card.tags.length > 0) {
     return card.tags;
   }
-  // 相容舊資料：若無 tags 則預設包含「推薦」與「我的商品」
-  return ["推薦", "我的商品"];
+  // 相容舊資料，以防萬一
+  return [];
 }
 
 function loadStoredCards() {
@@ -98,8 +98,8 @@ function renderCardToDOM(productData) {
   cardsArea.appendChild(cardElement);
 }
 
-function renderCardsByCategory(categoryName) {
-  currentCategory = categoryName;
+function renderCardsByCategory() {
+  const categoryName = sessionStorage.getItem(CURRENT_CATEGORY);
 
   // 1. 更新右側上方的大標題
   const titleEl = document.getElementById("category-title");
@@ -116,7 +116,7 @@ function renderCardsByCategory(categoryName) {
   cards = loadStoredCards();
   const filteredCards = cards.filter((card) => {
     const tags = normalizeCardTags(card);
-    return tags.includes(categoryName);
+    return tags.includes(categoryName) && card.status !== "delisted";
   });
 
   if (filteredCards.length === 0) {
@@ -143,7 +143,8 @@ function bindSidebarLinks() {
       link.classList.add("fw-bold", "text-primary");
 
       // 根據所選欄位切換大標題與商品卡片
-      renderCardsByCategory(selectedCategory);
+      sessionStorage.setItem(CURRENT_CATEGORY, selectedCategory);
+      renderCardsByCategory();
     });
   });
 }
@@ -160,14 +161,17 @@ function addCards(productData) {
   saveStoredCards(cards);
 
   // 2. 若當前頁面有 #cards-lists-area 且符合目前分類則立即渲染
-  if (tags.includes(currentCategory)) {
+  if (tags.includes(CURRENT_CATEGORY)) {
     renderCardToDOM(normalizedProduct);
   }
 }
 
 function initCardsList() {
+  if(sessionStorage.getItem(CURRENT_CATEGORY) === null){
+    sessionStorage.setItem(CURRENT_CATEGORY, "推薦");
+  }
   bindSidebarLinks();
-  renderCardsByCategory(currentCategory);
+  renderCardsByCategory();
 }
 
 function formatDateTime(rawTime) {
