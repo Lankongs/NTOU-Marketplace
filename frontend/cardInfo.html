@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>商品詳細資訊</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Bootstrap 5 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="./javascripts/topArea/listProducts.js"></script>
+    <script type="module" src="./javascripts/auth/member.js"></script>
+    <script type="module" src="./javascripts/mainArea/cardInfo.js"></script>
+  </head>
+  <body>
+    <!-- 頂層欄位（維持原樣不改動） -->
+    <nav
+      class="navbar navbar-expand-lg py-2"
+      style="background-color: #d5eeff"
+    >
+      <div class="container-fluid">
+        <div class="d-flex align-items-center gap-2">
+          <!-- 主頁按鈕 -->
+          <button type="button" id="to-home" class="btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-house-door" viewBox="0 0 16 16">
+              <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4z"/>
+            </svg>
+          </button>
+          <!-- 搜尋表單 -->
+          <div class="input-group py-2">
+            <input type="text" class="form-control" placeholder="關鍵字" />
+            <button class="btn btn-secondary" type="submit">送出</button>
+          </div>
+
+          <!-- 篩選按鈕（可搭配下拉選單或彈窗） -->
+          <div class="dropdown">
+            <button
+              class="btn btn-outline-dark dropdown-toggle"
+              type="button"
+              id="filterDropdown"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              篩選
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+              <li><a class="dropdown-item" href="#">依日期排序</a></li>
+              <li><a class="dropdown-item" href="#">依熱門度</a></li>
+              <li><hr class="dropdown-divider" /></li>
+              <li><a class="dropdown-item" href="#">進階篩選...</a></li>
+            </ul>
+          </div>
+        </div>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarContent"
+          aria-controls="navbarContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarContent">
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
+            <li class="nav-item">
+              <button type="button" id="filter-button" class="btn">
+                <img src="image/filter.png" alt="篩選" width="20" height="20" />
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="notify-button" class="btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
+                  <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6"/>
+                </svg>
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="shopping-cart-button" class="btn">
+                <img
+                  src="image/shopping-cart.png"
+                  alt="購物車"
+                  width="20"
+                  height="20"
+                />
+                購物車
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" id="list-products-button" class="btn">
+                <img
+                  src="image/edit.png"
+                  alt="刊登商品"
+                  width="20"
+                  height="20"
+                />
+                刊登商品
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="user-button"
+                class="btn"
+                aria-label="會員登入"
+              >
+                <img
+                  src="image/account.png"
+                  alt="使用者"
+                  width="20"
+                  height="20"
+                />
+                <span id="member-label">登入</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" id="logout-button" class="btn" hidden>
+                登出
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <p id="auth-message" role="alert" hidden></p>
+
+    <!-- 商品詳細內容主區塊 -->
+    <div class="container my-4">
+      <!-- 返回主頁按鈕 -->
+      <div class="mb-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="back-button">
+          ← 返回商品列表
+        </button>
+      </div>
+
+      <!-- 查無商品提示 -->
+      <div id="product-not-found" class="alert alert-warning text-center p-5 my-4" hidden>
+        <h4 class="alert-heading mb-3">查無此商品資訊</h4>
+        <p class="text-muted mb-4">可能該商品尚未建立或暫存已過期。</p>
+        <button type="button" class="btn btn-primary" onclick="window.location.assign('./index.html')">返回首頁列表</button>
+      </div>
+
+      <!-- 商品資訊展示區塊（已去除外圍黑邊與陰影） -->
+      <div id="product-detail-area" class="p-2 border-0 shadow-none bg-transparent">
+        <div class="row g-4 align-items-start">
+          <!-- 左欄：商品圖片與交易操作 -->
+          <div class="col-12 col-md-6 pe-md-4 border-end border-light-subtle">
+            <!-- 圖片外框（直購/競標標籤定位於左上角；無圖時維持現狀） -->
+            <div class="position-relative rounded-4 overflow-hidden border border-2 border-dark bg-white d-flex align-items-center justify-content-center mb-4" style="min-height: 280px; max-height: 380px;">
+              <!-- 模式標籤（維持原本設計Badge樣式，移至左上角） -->
+              <span id="detail-type-badge" class="position-absolute top-0 start-0 m-3 badge fs-6 z-1">模式</span>
+              
+              <!-- 商品照片 -->
+              <img id="detail-image" src="" alt="商品照片" class="img-fluid w-100 h-100" style="object-fit: contain; max-height: 380px;" hidden />
+              
+              <!-- 無商品照片時維持現狀 -->
+              <div id="detail-no-image" class="text-muted py-5 text-center">
+                <i class="bi bi-image fs-1 d-block mb-2"></i>
+                <span>無商品照片</span>
+              </div>
+            </div>
+
+            <!-- 【直購模式操作區】 -->
+            <div id="direct-trade-section" class="trade-section" hidden>
+              <div class="fs-4 fw-bold mb-2">
+                價格：$<span id="direct-price-val">0</span>
+              </div>
+              <div class="text-secondary mb-3">
+                剩餘數量：<span id="direct-quantity-val">0</span> 個
+              </div>
+
+              <!-- 購買數量選擇器 -->
+              <div class="d-flex align-items-center gap-3 mb-4">
+                <span class="fw-semibold">購買數量</span>
+                <div class="input-group" style="max-width: 170px;">
+                  <button class="btn btn-outline-success px-3 fw-bold" type="button" id="btn-qty-minus" disabled>-</button>
+                  <input type="text" class="form-control text-center border-success fw-bold" id="input-qty" value="1" readonly />
+                  <button class="btn btn-outline-success px-3 fw-bold" type="button" id="btn-qty-plus">+</button>
+                </div>
+              </div>
+
+              <!-- 雙按鈕列 -->
+              <div class="d-flex gap-3">
+                <button type="button" class="btn btn-outline-dark px-3 py-2 rounded-3 text-nowrap btn-track" id="btn-track-direct">
+                  <i class="bi bi-heart me-1"></i><span class="track-text">追蹤商品</span>
+                </button>
+                <button type="button" class="btn btn-outline-success px-4 py-2 rounded-3 flex-grow-1 fw-bold text-nowrap" id="btn-add-cart">
+                  加入購物車
+                </button>
+              </div>
+            </div>
+
+            <!-- 【競標模式操作區】 -->
+            <div id="auction-trade-section" class="trade-section" hidden>
+              <div class="fs-4 fw-bold mb-2">
+                目前最高出價：$<span id="auction-price-val">0</span>
+              </div>
+              <div class="text-secondary mb-3">
+                競標截止時間：<span id="auction-time-val">未指定</span>
+              </div>
+
+              <!-- 輸入出價金額框 -->
+              <div class="mb-4">
+                <input
+                  type="number"
+                  class="form-control border-2 border-success py-2 px-3 rounded-3"
+                  id="input-bid-amount"
+                  placeholder="輸入出價金額"
+                  min="1"
+                />
+              </div>
+
+              <!-- 雙按鈕列 -->
+              <div class="d-flex gap-3">
+                <button type="button" class="btn btn-outline-dark px-3 py-2 rounded-3 text-nowrap btn-track" id="btn-track-auction">
+                  <i class="bi bi-heart me-1"></i><span class="track-text">追蹤商品</span>
+                </button>
+                <button type="button" class="btn btn-outline-success px-4 py-2 rounded-3 flex-grow-1 fw-bold text-nowrap" id="btn-submit-bid">
+                  確認出價
+                </button>
+              </div>
+            </div>
+
+            <!-- 運送方式區塊（美化卡片樣式） -->
+            <div class="mt-4 p-3 bg-light rounded-3 d-flex align-items-center gap-2 text-secondary border">
+              <i class="bi bi-truck fs-5 text-dark"></i>
+              <span class="fw-semibold text-dark">運送方式：</span>
+              <span id="detail-shipping" class="badge bg-white text-dark border px-2 py-1 fs-6">校內面交</span>
+            </div>
+          </div>
+
+          <!-- 右欄：商品名稱與商品描述 -->
+          <div class="col-12 col-md-6 ps-md-4">
+            <h3 class="fw-bold mb-3">
+              商品名稱：<span id="detail-name">ABC</span>
+            </h3>
+
+            <!-- 分類標籤（輔助顯示） -->
+            <div class="mb-4" id="detail-tags"></div>
+
+            <!-- 商品描述 -->
+            <div class="fs-5 text-secondary" style="line-height: 1.8;">
+              <span class="fw-semibold text-dark">商品描述：</span><span id="detail-desc">無描述</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
