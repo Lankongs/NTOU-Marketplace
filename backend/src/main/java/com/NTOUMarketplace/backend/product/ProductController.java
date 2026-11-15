@@ -22,8 +22,11 @@ public class ProductController {
     public List<Product> getProducts(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String tag) {
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) String sort) {
 
-        return productService.searchProducts(keyword, type, tag);
+        return productService.searchProducts(
+            keyword, type, tag, sort
+        );
     }
 }
