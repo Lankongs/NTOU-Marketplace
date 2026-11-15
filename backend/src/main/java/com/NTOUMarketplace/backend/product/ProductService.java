@@ -1,8 +1,8 @@
+//Service_new
 
 package com.NTOUMarketplace.backend.product;
 
 import java.util.List;
-
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,5 +16,15 @@ public class ProductService {
 
     public List<Product> getAllProducts() {
         return productRepository.findAll();
+    }
+
+    public List<Product> searchProducts(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return getAllProducts();
+        }
+
+        return productRepository.findByNameContainingIgnoreCase(
+            keyword.trim()
+        );
     }
 }
