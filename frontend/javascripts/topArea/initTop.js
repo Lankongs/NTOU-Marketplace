@@ -25,6 +25,14 @@ function init(){
       }
     });
   }
+
+  // 頂層「購物車按鈕」：點擊跳轉至 cart.html
+  const cartButton = document.getElementById("shopping-cart-button");
+  if (cartButton) {
+    cartButton.addEventListener("click", () => {
+      window.location.assign("./cart.html");
+    });
+  }
 }
 
 window.addEventListener("load", init);

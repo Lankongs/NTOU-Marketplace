@@ -1,4 +1,5 @@
 const STORAGE_KEY = "ntou_marketplace_cards";
+import { addToCart } from "./cartStore.js";
 
 function loadProduct() {
   const params = new URLSearchParams(window.location.search);
@@ -70,6 +71,48 @@ function setupQuantityController(maxQuantity) {
       updateButtonStates();
     }
   };
+}
+
+// ===== 直購商品：加入購物車 =====
+// 購物車資料存放在 cartStore.js；正式接上後端時改用購物車 API。
+async function handleAddToCart(product, button) {
+  if (button.dataset.cartBusy === "true") return;
+  button.dataset.cartBusy = "true";
+  button.disabled = true;
+
+  try {
+    // 已有登入後端，因此仍使用 /api/auth/me 確認登入狀態。
+    /*
+    try {
+      await api("/api/auth/me");
+    } catch (error) {
+      if (error.status === 401 || error.status === 403) {
+        window.location.assign("./login.html");
+        return;
+      }
+      throw new Error("伺服器錯誤，暫時無法確認登入狀態");
+    }*/
+
+    const input = document.getElementById("input-qty");
+    const quantity = Number(input?.value ?? 1);
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      throw new Error("請輸入有效的購買數量");
+    }
+
+    // 「商品 + 預設規格」相同時，cartStore.js 會合併數量。
+    const result = addToCart(product, quantity);
+    alert(
+      result.clamped
+        ? `庫存僅剩 ${result.qty} 件，購物車數量已調整`
+        : `已將 ${quantity} 件「${product.name}」加入購物車！`
+    );
+  } catch (error) {
+    alert(error.message || "加入購物車失敗");
+  } finally {
+    button.dataset.cartBusy = "false";
+    // 已售完的商品不可重新啟用加入按鈕。
+    button.disabled = product.type !== "direct" || product.status === "delisted" || Number(product.quantity) <= 0;
+  }
 }
 
 function setupTrackButtons() {
@@ -150,10 +193,9 @@ function renderProductDetails(product) {
     // 加入購物車按鈕反饋
     const addCartBtn = document.getElementById("btn-add-cart");
     if (addCartBtn) {
-      addCartBtn.onclick = () => {
-        const qty = document.getElementById("input-qty")?.value || 1;
-        alert(`已成功將 ${qty} 件「${product.name}」加入購物車！`);
-      };
+      const available = product.status !== "delisted" && Number(product.quantity) > 0;
+      addCartBtn.disabled = !available;
+      addCartBtn.onclick = () => handleAddToCart(product, addCartBtn);
     }
   } else if (product.type === "auction") {
     if (typeBadgeEl) {

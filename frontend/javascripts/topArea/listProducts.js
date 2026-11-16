@@ -28,6 +28,14 @@ function init() {
     });
   }
 
+  // 頂層「購物車按鈕」：點擊跳轉至 cart.html
+  const cartButton = document.getElementById("shopping-cart-button");
+  if (cartButton) {
+    cartButton.addEventListener("click", () => {
+      window.location.assign("./cart.html");
+    });
+  }
+
   // 若當前頁面存在 #product-form-area（即位於 addProducts.html），初始化表單邏輯
   const formArea = document.getElementById("product-form-area");
   if (formArea) {
