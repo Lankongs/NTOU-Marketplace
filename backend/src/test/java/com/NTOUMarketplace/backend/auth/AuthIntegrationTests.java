@@ -8,21 +8,23 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import org.bson.Document;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.NTOUMarketplace.backend.MongoIntegrationTest;
 import org.springframework.test.context.ActiveProfiles;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = "spring.datasource.url=jdbc:h2:mem:auth-integration;DB_CLOSE_DELAY=-1")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("demo")
-class AuthIntegrationTests {
+class AuthIntegrationTests extends MongoIntegrationTest {
     @Value("${local.server.port}") int port;
-    @Autowired JdbcTemplate jdbc;
+    @Autowired MemberRepository members;
+    @Autowired MongoTemplate mongo;
     private final ObjectMapper json = new ObjectMapper();
     private final CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
     private final HttpClient client = HttpClient.newBuilder().cookieHandler(cookies).followRedirects(HttpClient.Redirect.NEVER).build();
@@ -43,6 +45,7 @@ class AuthIntegrationTests {
         assertTrue(get("/index.html").body().contains("member-label"));
         assertEquals(404, get("/node_modules/bootstrap/package.json").statusCode());
         assertEquals(401, get("/api/auth/me").statusCode());
+        assertEquals(401, get("/api/products").statusCode());
         assertEquals(302, get("/home").statusCode());
         assertEquals(403, post("/api/auth/login", VALID, null).statusCode());
         JsonNode token = csrf();
@@ -57,7 +60,17 @@ class AuthIntegrationTests {
         assertEquals(200, login.statusCode());
         assertFalse(login.body().contains("password"));
         assertEquals("demo", json.readTree(login.body()).get("user").get("account").asText());
+        assertTrue(json.readTree(login.body()).get("user").get("id").isIntegralNumber());
         assertNotEquals(oldSession, sessionId());
+        mongo.getCollection("products").insertOne(new Document("_id", "product-1")
+            .append("type", "direct").append("name", "測試商品").append("price", 100).append("quantity", 2));
+        var products = get("/api/products");
+        assertEquals(200, products.statusCode());
+        var product = json.readTree(products.body()).get(0);
+        assertEquals("product-1", product.get("id").asText());
+        assertEquals("測試商品", product.get("name").asText());
+        assertEquals(100, product.get("price").asInt());
+        assertFalse(products.body().contains("passwordHash"));
         assertTrue(login.headers().allValues("set-cookie").stream().anyMatch(v -> v.contains("HttpOnly") && v.contains("SameSite=Lax")));
         assertEquals(200, get("/api/auth/me").statusCode());
         assertEquals(302, get("/home").statusCode());
@@ -69,7 +82,7 @@ class AuthIntegrationTests {
         assertEquals(401, get("/api/auth/me").statusCode());
         var stale = HttpClient.newHttpClient().send(request("/api/auth/me").header("Cookie", "JSESSIONID=" + authenticatedSession).GET().build(), HttpResponse.BodyHandlers.ofString());
         assertEquals(401, stale.statusCode());
-        String hash = jdbc.queryForObject("SELECT password_hash FROM members WHERE account = 'demo'", String.class);
+        String hash = members.find("demo").orElseThrow().passwordHash();
         assertTrue(hash.startsWith("$2")); assertNotEquals("Campus123!", hash);
         assertEquals(200, post("/api/auth/login", VALID, csrf()).statusCode());
         assertEquals(200, post("/api/auth/logout", "{}", csrf()).statusCode());

@@ -1,10 +1,10 @@
 # 會員登入：啟動、展示與前端串接
 
-本功能整合至現有 Spring Boot 4.1.1 / Java 17 專案，使用 Spring Security、JDBC 與 H2。沿用團隊的 `frontend/index.html`，登入成功後回到同一個首頁，顯示會員名稱與登出按鈕。訪客仍可瀏覽首頁。
+本功能整合至現有 Spring Boot 4.1.1 / Java 17 專案，使用 Spring Security 與 MongoDB。沿用團隊的 `frontend/index.html`，登入成功後回到同一個首頁，顯示會員名稱與登出按鈕。訪客仍可瀏覽首頁。
 
 ## 本機啟動
 
-需要 JDK 17 以上與網路（首次 Maven 下載套件需要）。專案已附 Maven Wrapper，不必自行安裝 Maven 或資料庫。
+需要 JDK 17 以上與網路（首次 Maven 下載套件需要）。專案已附 Maven Wrapper，不必自行安裝 Maven；需要執行 MongoDB（可在根目錄執行 `docker compose up -d`，詳見 [MongoDB 設定與遷移](MONGODB_MIGRATION.md)）。
 
 在專案根目錄雙擊 `start-login.cmd`，或開啟 PowerShell：
 
@@ -23,7 +23,7 @@ cd backend
 
 改開 http://localhost:8081/login.html 。這個版本使用 8080，不需啟動之前獨立 Node.js 展示的 3000。
 
-只有 `demo` profile 會建立測試會員，資料存於 `backend/data/marketplace-demo.mv.db`。一般啟動不建立測試會員，資料庫是 `backend/data/marketplace.mv.db`。帳號已存在時不覆蓋密碼。請勿將 demo profile 用在正式網站。
+只有 `demo` profile 會建立測試會員，資料存於 `ntou_marketplace_demo`（可用 `MONGODB_DEMO_URI` 指定）。一般啟動不建立測試會員，資料庫是 `ntou_marketplace_dev`（可用 `MONGODB_URI` 指定）。帳號已存在時不覆蓋密碼。請勿將 demo profile 用在正式網站。
 
 ## 展示順序
 
@@ -39,10 +39,9 @@ cd backend
 | --- | --- |
 | `backend/.../auth/SecurityConfig.java` | Security 設定、Session、CSRF、登出、存取限制 |
 | `backend/.../auth/AuthController.java` | JSON 登入、目前會員、CSRF token API |
-| `backend/.../auth/MemberRepository.java` | 參數化 SQL 讀寫會員 |
+| `backend/.../auth/MemberRepository.java` | MongoDB 會員查詢、唯一帳號索引與原子數字 ID |
 | `backend/.../auth/DemoMemberInitializer.java` | demo profile 建立測試會員 |
 | `backend/.../auth/LoginThrottle.java` | 來源 IP 登入速率限制 |
-| `backend/src/main/resources/schema.sql` | 會員資料表 |
 | `frontend/login.html`、`frontend/auth.css` | 獨立登入畫面樣式，不改首頁 CSS |
 | `frontend/javascripts/auth/api.js` | 共用 API 與 CSRF 請求處理 |
 | `frontend/javascripts/auth/login.js` | 登入畫面事件 |
@@ -105,13 +104,13 @@ Postman 也需要先呼叫 csrf API，保留 Cookie，再使用 token 標頭送�
 
 ## 資料與安全行為
 
-- 密碼以 BCrypt（cost 12）儲存，不存明文；會員查詢使用參數化 SQL。
+- 密碼以 BCrypt（cost 12）儲存，不存明文；會員查詢使用字串相等條件，不解析使用者提供的查詢 JSON。
 - 登入狀態保存在伺服器 HttpSession，閒置 60 分鐘到期；重啟後失效。
 - 身分取自 Spring Security，不相信前端提供的會員 ID。
 - `/api/**` 預設要求登入，只有 `/api/auth/csrf`、`/api/auth/login` 公開；未來新增公開 API 要明確加入白名單。
 - Cookie 設定 HttpOnly、SameSite=Lax；保留 Spring Security 預設 CSRF 保護。
 - 本機僅監聽 127.0.0.1；正式部署須配置 HTTPS、Secure Cookie、正式資料庫與 Session 儲存策略。
-- 這次未實作註冊、重設密碼、海大身分驗證、商品後端或交易權限。
+- 這次未實作註冊、重設密碼、海大身分驗證或交易權限；商品後端僅提供登入後的 `GET /api/products`。
 - 既有商品表單仍是前端展示；未來交易 API 需檢查登入會員與商品擁有者。
 
 ## 測試與打包
@@ -123,7 +122,7 @@ Postman 也需要先呼叫 csrf API，保留 Cookie，再使用 token 標頭送�
 .\mvnw.cmd package
 ```
 
-測試使用記憶體 H2，不動本機展示資料庫。包含真實 HTTP 的登入成功／失敗、輸入檢查、SQL 注入字串、CSRF、Session 更換、登出後拒絕舊 Cookie、會員資料與密碼雜湊、登入限流與時間到期解除等案例。
+測試需要真實 MongoDB，預設連到 `127.0.0.1:27017`，或指定 `TEST_MONGODB_URI`。測試覆寫資料庫名稱為隨機 `ntou_test_*`，結束後刪除該測試資料庫，不動本機展示資料庫。包含真實 HTTP 的登入成功／失敗、輸入檢查、SQL／MongoDB 注入字串、CSRF、Session 更換、登出後拒絕舊 Cookie、會員資料與密碼雜湊、登入限流與時間到期解除等案例。
 
 打包後可以執行：
 
@@ -133,6 +132,6 @@ java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo
 
 前端已包含在 jar，無需再開 Live Server。若改成獨立前端主機或連接埠，需另設代理／CORS 與 Cookie 策略。
 
-## Git 提交
+## MongoDB 與既有資料
 
-本次在 `feature/member-login` 開發，依團隊規範提交 PR 至 `develop`。提交前使用 `git status` 檢查；本機 `data/`、`target/` 與 log 不提交。此次變更尚未自動 Commit、Push 或開 PR。
+連線環境變數、商品分支整合範圍、H2 匯出與回復流程請見 [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md)。

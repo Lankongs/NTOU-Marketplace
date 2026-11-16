@@ -12,6 +12,13 @@ public class DemoMemberInitializer implements CommandLineRunner {
     private final PasswordEncoder encoder;
     public DemoMemberInitializer(MemberRepository members, PasswordEncoder encoder) { this.members = members; this.encoder = encoder; }
     @Override public void run(String... args) {
-        if (members.find("demo").isEmpty()) members.create("demo", "海大同學", encoder.encode("Campus123!"));
+        if (members.find("demo").isEmpty()) {
+            try {
+                members.create("demo", "海大同學", encoder.encode("Campus123!"));
+            } catch (org.springframework.dao.DuplicateKeyException ex) {
+                // Another instance may have seeded the same account concurrently.
+                if (members.find("demo").isEmpty()) throw ex;
+            }
+        }
     }
 }
