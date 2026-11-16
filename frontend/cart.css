@@ -1,0 +1,389 @@
+/* =========================================
+   購物車頁面樣式
+   所有選擇器限制在 .ntou-cart-page 內，
+   避免影響同學製作的其他頁面。
+   ========================================= */
+
+/* 1. 頁面整體與主內容 */
+.ntou-cart-page {
+    min-height: 100vh;
+    background-color: #f8f9fa;
+    color: #212529;
+    font-family: system-ui, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+.ntou-cart-page .cart-page-content {
+    max-width: 1650px;
+    margin: 0 auto;
+}
+
+.ntou-cart-page .cart-content-panel {
+    min-height: 500px;
+    border-color: #dee2e6 !important;
+}
+
+.ntou-cart-page .cart-heading h1 {
+    font-size: 1.8rem;
+}
+
+.ntou-cart-page .cart-title-count {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 5px 9px;
+    border-radius: 5px;
+    background-color: #e9ecef;
+    color: #6c757d;
+    font-size: 0.8rem;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+/* 2. 購物車清單與右側摘要兩欄 */
+.ntou-cart-page .cart-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 24px;
+    align-items: start;
+}
+
+.ntou-cart-page .cart-list-column {
+    min-width: 0;
+}
+
+.ntou-cart-page .cart-list-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 18px;
+    margin-bottom: 14px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    color: #6c757d;
+}
+
+.ntou-cart-page .cart-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    cursor: pointer;
+    color: #212529;
+}
+
+.ntou-cart-page input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #0d6efd;
+    cursor: pointer;
+}
+
+/* 3. 賣家區塊 */
+.ntou-cart-page .cart-seller-group {
+    margin-bottom: 16px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+}
+
+.ntou-cart-page .cart-seller-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.ntou-cart-page .cart-seller-head-left {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.ntou-cart-page .cart-store-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    background-color: #e7f1ff;
+    color: #0d6efd;
+}
+
+.ntou-cart-page .cart-seller-name {
+    font-weight: 700;
+}
+
+.ntou-cart-page .cart-seller-count {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+/* 4. 單筆購物車商品 */
+.ntou-cart-page .cart-item {
+    display: grid;
+    grid-template-columns: 20px 95px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 18px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.ntou-cart-page .cart-item:last-child {
+    border-bottom: none;
+}
+
+.ntou-cart-page .cart-item.invalid {
+    background-color: #f8f9fa;
+}
+
+.ntou-cart-page .cart-item.invalid .cart-item-image,
+.ntou-cart-page .cart-item.invalid .cart-item-main {
+    opacity: 0.55;
+}
+
+.ntou-cart-page .cart-item-image {
+    display: grid;
+    place-items: center;
+    width: 95px;
+    height: 95px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: #f8f9fa;
+    font-size: 38px;
+}
+
+.ntou-cart-page .cart-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ntou-cart-page .cart-item-main {
+    min-width: 0;
+}
+
+.ntou-cart-page .cart-item-name {
+    margin: 0 0 7px;
+    font-size: 1rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.ntou-cart-page .cart-item-meta {
+    margin-bottom: 9px;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.ntou-cart-page .cart-item-price {
+    color: #0d6efd;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.ntou-cart-page .cart-item-status {
+    margin-top: 7px;
+    color: #dc3545;
+    font-size: 0.85rem;
+}
+
+/* 5. 數量加減、手動輸入與刪除按鈕 */
+.ntou-cart-page .cart-item-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.ntou-cart-page .cart-qty {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    overflow: hidden;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+}
+
+.ntou-cart-page .cart-qty button {
+    width: 34px;
+    height: 100%;
+    border: 0;
+    background-color: #f8f9fa;
+    color: #343a40;
+}
+
+.ntou-cart-page .cart-qty button:disabled {
+    color: #adb5bd;
+    cursor: not-allowed;
+}
+
+.ntou-cart-page .cart-qty input {
+    width: 46px;
+    height: 100%;
+    border: 0;
+    border-inline: 1px solid #dee2e6;
+    text-align: center;
+    background-color: #fff;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.ntou-cart-page .cart-qty input::-webkit-inner-spin-button,
+.ntou-cart-page .cart-qty input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.ntou-cart-page .cart-delete {
+    padding: 3px;
+    border: 0;
+    background: transparent;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.ntou-cart-page .cart-delete:hover {
+    color: #dc3545;
+}
+
+/* 6. 訂單摘要 */
+.ntou-cart-page .cart-summary {
+    position: sticky;
+    top: 20px;
+    padding: 24px;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+}
+
+.ntou-cart-page .cart-summary h2 {
+    margin: 0 0 24px;
+    padding-bottom: 13px;
+    border-bottom: 1px solid #dee2e6;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.ntou-cart-page .cart-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 17px 0;
+    color: #6c757d;
+}
+
+.ntou-cart-page .cart-summary-row strong {
+    color: #212529;
+}
+
+.ntou-cart-page .cart-summary-note {
+    padding: 10px 12px;
+    margin: 22px 0;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+.ntou-cart-page .cart-summary-total {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid #dee2e6;
+    font-weight: 700;
+}
+
+.ntou-cart-page .cart-summary-total strong {
+    color: #0d6efd;
+    font-size: 1.55rem;
+}
+
+.ntou-cart-page .cart-checkout {
+    width: 100%;
+    margin-top: 22px;
+    padding: 11px 12px;
+    border: none;
+    border-radius: 6px;
+    background-color: #0d6efd;
+    color: white;
+    font-weight: 600;
+}
+
+.ntou-cart-page .cart-checkout:disabled {
+    background-color: #adb5bd;
+    cursor: not-allowed;
+}
+
+/* 7. 空購物車與操作提示 */
+.ntou-cart-page .cart-empty {
+    padding: 65px 20px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.ntou-cart-page .cart-preview-hint {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.ntou-cart-page .cart-preview-hint button {
+    padding: 5px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.ntou-cart-page .cart-preview-hint[hidden],
+.ntou-cart-page .cart-empty[hidden],
+.ntou-cart-page #cart-notice[hidden] {
+    display: none !important;
+}
+
+/* 8. 手機與平板排版 */
+@media (max-width: 992px) {
+    .ntou-cart-page .cart-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .ntou-cart-page .cart-summary {
+        position: static;
+    }
+}
+
+@media (max-width: 600px) {
+    .ntou-cart-page .cart-heading h1 {
+        font-size: 1.5rem;
+    }
+
+    .ntou-cart-page .cart-item {
+        grid-template-columns: 20px 76px minmax(0, 1fr);
+        gap: 10px;
+        padding: 14px;
+    }
+
+    .ntou-cart-page .cart-item-image {
+        width: 76px;
+        height: 76px;
+    }
+
+    .ntou-cart-page .cart-item-actions {
+        grid-column: 3;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
