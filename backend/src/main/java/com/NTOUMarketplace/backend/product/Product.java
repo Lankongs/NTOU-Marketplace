@@ -18,6 +18,7 @@ public class Product {
     private String shipping;
     private String image;
     private List<String> tags;
+    private String status = "selling"; // 預設販售中
 
     // 直購商品欄位
     private Integer price;
@@ -33,6 +34,7 @@ public class Product {
     public Product() {
     }
 
+    public String getStatus() { return status; }
     public String getId() { return id; }
     public String getType() { return type; }
     public String getName() { return name; }

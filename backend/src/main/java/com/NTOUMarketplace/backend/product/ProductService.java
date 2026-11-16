@@ -25,16 +25,17 @@ public class ProductService {
     }
 
     public List<Product> searchProducts(String keyword) {
-        return searchProducts(keyword, null, null, null);
+        return searchProducts(keyword, null, null, null, null);
     }
 
     public List<Product> searchProducts(
-            String keyword, String type, String tag, String sort) {
+            String keyword, String type, String tag, String sort, String status) {
 
         keyword = normalize(keyword);
         type = normalize(type);
         tag = normalize(tag);
         sort = normalize(sort);
+        status = normalize(status);
 
         if (type != null
                 && !type.equals("direct")
@@ -54,12 +55,23 @@ public class ProductService {
             );
         }
 
+
+        if (status != null
+                && !status.equals("selling")
+                && !status.equals("sold")) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "status 必須是 selling 或 sold"
+            );
+        }
+
+
         if (keyword == null && type == null
-                && tag == null && sort == null) {
+                && tag == null && sort == null && status == null) {
             return getAllProducts();
         }
 
-        return queryRepository.search(keyword, type, tag, sort);
+        return queryRepository.search(keyword, type, tag, sort, status);
     }
 
     private String normalize(String value) {

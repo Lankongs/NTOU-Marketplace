@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.junit.jupiter.api.BeforeEach;
 
 import com.NTOUMarketplace.backend.MongoIntegrationTest;
 
@@ -21,6 +22,11 @@ class ProductQueryRepositoryTests extends MongoIntegrationTest {
 
     @Autowired
     private ProductQueryRepository queryRepository;
+
+    @BeforeEach
+    void clearProducts() {
+        mongoTemplate.getCollection("products").deleteMany(new Document());
+    }
 
     @Test
     void searchesFiltersAndSortsByCurrentPrice() {
@@ -57,33 +63,33 @@ class ProductQueryRepositoryTests extends MongoIntegrationTest {
         assertNames(
             List.of("競標鍵盤", "二手藍牙耳機",
                     "競標腳踏車", "SONY 耳機"),
-            queryRepository.search(null, null, null, "price_asc")
+            queryRepository.search(null, null, null, "price_asc", null)
         );
 
         // 測試價格由高到低
         assertNames(
             List.of("SONY 耳機", "競標腳踏車",
                     "二手藍牙耳機", "競標鍵盤"),
-            queryRepository.search(null, null, null, "price_desc")
+            queryRepository.search(null, null, null, "price_desc", null)
         );
 
         // 測試關鍵字、類型及標籤組合
         assertNames(
             List.of("二手藍牙耳機", "SONY 耳機"),
             queryRepository.search(
-                "耳機", "direct", "電子", "price_asc")
+                "耳機", "direct", "電子", "price_asc", null)
         );
 
         // 測試英文不區分大小寫
         assertNames(
             List.of("SONY 耳機"),
-            queryRepository.search("sony", null, null, null)
+            queryRepository.search("sony", null, null, null, null)
         );
 
         // 測試查不到商品時回傳空結果
         assertNames(
             List.of(),
-            queryRepository.search("notfound12345", null, null, null)
+            queryRepository.search("notfound12345", null, null, null, null)
         );
 
         // 模擬競標最高價上升：900 -> 1500
@@ -97,9 +103,67 @@ class ProductQueryRepositoryTests extends MongoIntegrationTest {
         assertNames(
             List.of("競標鍵盤", "二手藍牙耳機",
                     "SONY 耳機", "競標腳踏車"),
-            queryRepository.search(null, null, null, "price_asc")
+            queryRepository.search(null, null, null, "price_asc", null)
         );
     }
+
+    @Test
+        void filtersProductsBySellingStatus() {
+
+            // 建立四筆專門測試販售狀態的商品
+            mongoTemplate.getCollection("products").insertMany(List.of(
+                new Document("_id", "status-selling")
+                    .append("type", "direct")
+                    .append("name", "販售中的耳機")
+                    .append("status", "selling")
+                    .append("tags", List.of("電子"))
+                    .append("price", 500),
+
+                new Document("_id", "status-sold")
+                    .append("type", "direct")
+                    .append("name", "已售出的耳機")
+                    .append("status", "sold")
+                    .append("tags", List.of("電子"))
+                    .append("price", 300),
+
+                new Document("_id", "status-legacy")
+                    .append("type", "direct")
+                    .append("name", "舊版商品")
+                    .append("tags", List.of("二手"))
+                    .append("price", 800),
+
+                new Document("_id", "status-auction")
+                    .append("type", "auction")
+                    .append("name", "販售中的競標鍵盤")
+                    .append("status", "selling")
+                    .append("tags", List.of("電子"))
+                    .append("startPrice", 200)
+            ));
+
+            // 販售中：包含明確標記 selling，以及沒有 status 的舊商品
+            assertNames(
+                List.of("販售中的競標鍵盤", "販售中的耳機",  "舊版商品"),
+                queryRepository.search(null, null, null, "price_asc", "selling")
+            );
+
+            // 已售出：只能找到明確標記 sold 的商品
+            assertNames(
+                List.of("已售出的耳機"),
+                queryRepository.search(null, null, null, null, "sold")
+            );
+
+            // 多條件組合：直購、電子、販售中、價格由低到高
+            assertNames(
+                List.of("販售中的耳機"),
+                queryRepository.search(null, "direct", "電子", "price_asc", "selling")
+            );
+
+            // 已售出商品也可以依價格排序
+            assertNames(
+                List.of("已售出的耳機"),
+                queryRepository.search(null, null, null, "price_desc", "sold")
+            );
+        }
 
     private void assertNames(
             List<String> expected,

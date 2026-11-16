@@ -23,7 +23,7 @@ public class ProductQueryRepository {
     }
 
     public List<Product> search(
-            String keyword, String type, String tag, String sort) {
+            String keyword, String type, String tag, String sort, String status) {
 
         List<Criteria> conditions = new ArrayList<>();
 
@@ -42,6 +42,21 @@ public class ProductQueryRepository {
         if (tag != null) {
             conditions.add(Criteria.where("tags").is(tag));
         }
+
+
+        if (status != null) {
+            if (status.equals("selling")) {
+                // 舊商品沒有 status 欄位時，暫時視為販售中
+                conditions.add(new Criteria().orOperator(
+                    Criteria.where("status").is("selling"),
+                    Criteria.where("status").exists(false),
+                    Criteria.where("status").is(null)
+                ));
+            } else if (status.equals("sold")) {
+                conditions.add(Criteria.where("status").is("sold"));
+            }
+        }
+
 
         List<AggregationOperation> stages = new ArrayList<>();
 
