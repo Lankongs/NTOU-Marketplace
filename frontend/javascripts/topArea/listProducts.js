@@ -1,41 +1,6 @@
 import { addCards } from "../mainArea/cardsList.js";
 
 function init() {
-  // 頂層「主頁按鈕」：點擊回到 index.html
-  const homeButton = document.getElementById("to-home");
-  if (homeButton) {
-    homeButton.addEventListener("click", () => {
-      window.location.assign("./index.html");
-    });
-  }
-
-  // 頂層「刊登商品按鈕」：點擊跳轉至 addProducts.html
-  const addButton = document.getElementById("list-products-button");
-  if (addButton) {
-    addButton.addEventListener("click", () => {
-      window.location.assign("./addProducts.html");
-    });
-  }
-
-  // 頂層「會員按鈕」：若已登入（登出按鈕可見），點擊跳轉至 selfPage.html
-  const userButton = document.getElementById("user-button");
-  const logoutButton = document.getElementById("logout-button");
-  if (userButton) {
-    userButton.addEventListener("click", () => {
-      if (logoutButton && !logoutButton.hidden) {
-        window.location.assign("./selfPage.html");
-      }
-    });
-  }
-
-  // 頂層「購物車按鈕」：點擊跳轉至 cart.html
-  const cartButton = document.getElementById("shopping-cart-button");
-  if (cartButton) {
-    cartButton.addEventListener("click", () => {
-      window.location.assign("./cart.html");
-    });
-  }
-
   // 若當前頁面存在 #product-form-area（即位於 addProducts.html），初始化表單邏輯
   const formArea = document.getElementById("product-form-area");
   if (formArea) {
