@@ -9,4 +9,4 @@ A campus marketplace for NTOU students, supporting direct purchases, auctions, a
 
 啟動、測試與 API 串接方式請參閱 [會員登入說明](docs/MEMBER_LOGIN.md)。
 
-MongoDB 連線環境變數、既有 H2 資料匯入及回復步驟請參閱 [MongoDB 遷移說明](docs/MONGODB_MIGRATION.md)。
+MongoDB 連線環境變數、啟動與測試方式請參閱 [MongoDB 遷移說明](docs/MONGODB_MIGRATION.md)。

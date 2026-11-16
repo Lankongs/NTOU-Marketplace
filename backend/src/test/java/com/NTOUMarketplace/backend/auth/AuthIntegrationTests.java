@@ -42,7 +42,15 @@ class AuthIntegrationTests extends MongoIntegrationTest {
     @Test void completeBrowserSessionAndSecurityFlow() throws Exception {
         assertEquals(200, get("/login.html").statusCode());
         assertEquals(200, get("/index.html").statusCode()); // 訪客首頁仍可使用
-        assertTrue(get("/index.html").body().contains("member-label"));
+        // The navbar is rendered by initTop.js; HttpClient does not execute JavaScript.
+        String home = get("/index.html").body();
+        assertTrue(home.contains("id=\"top-navbar\""));
+        assertTrue(home.contains("./javascripts/topArea/initTop.js"));
+        assertTrue(home.contains("./javascripts/auth/member.js"));
+        var navbarScript = get("/javascripts/topArea/initTop.js");
+        assertEquals(200, navbarScript.statusCode());
+        assertTrue(navbarScript.body().contains("id=\"member-label\""));
+        assertEquals(200, get("/javascripts/auth/member.js").statusCode());
         assertEquals(404, get("/node_modules/bootstrap/package.json").statusCode());
         assertEquals(401, get("/api/auth/me").statusCode());
         assertEquals(401, get("/api/products").statusCode());

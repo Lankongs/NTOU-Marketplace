@@ -1,9 +1,9 @@
 name: Backend MongoDB tests
 on:
   pull_request:
-    paths: ['backend/**', 'frontend/**', 'tools/**', '.github/workflows/backend.yml']
+    paths: ['backend/**', 'frontend/**', '.github/workflows/backend.yml']
   push:
-    branches: [develop, main, 'codex/mongodb-migration']
+    branches: [develop, main]
 permissions:
   contents: read
 jobs:
@@ -29,5 +29,3 @@ jobs:
         env:
           TEST_MONGODB_URI: mongodb://127.0.0.1:27017
         run: bash mvnw -B clean verify
-      - name: Test offline H2 export conversion
-        run: python3 -m unittest discover -s tools -p 'test_*.py'

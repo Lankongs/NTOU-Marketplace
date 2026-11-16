@@ -22,7 +22,7 @@ feature/功能名稱        各自開發功能的分支
 
 1. 註冊／登入 [GitHub](https://github.com/)。
 2. 接受 Repository 的 Collaborator 邀請（通常會寄到 GitHub 帳號的電子郵件）。
-3. 確認能開啟 [NTOU-Marketplace](https://github.com/Lankongs/NTOU-Marketplace)。此專案是 Private，沒接受邀請可能看不到。
+3. 確認能開啟 [NTOU-Marketplace](https://github.com/Lankongs/NTOU-Marketplace)。是否能瀏覽或推送，依儲存庫可見性及你的權限而定。
 4. 安裝 [Git](https://git-scm.com/downloads)。建議搭配 VS Code 的 Source Control 功能；也可以使用 [GitHub Desktop](https://desktop.github.com/)。
 5. **第一次用命令列提交程式**，設定自己的署名：
 
@@ -113,6 +113,10 @@ git add path/to/changed-file
 ```
 
 或者確定沒有敏感資料、不必要的檔案後，才使用 `git add .`。
+
+提交前執行 `git diff --cached --stat`、`git diff --cached` 與 `git diff --cached --check`，確認只有本次需求需要的變更。不要提交 `node_modules/`、建置產物、`.DS_Store`、個人 `.idea/`／`.vscode/` 設定、資料庫或含憑證的匯出檔；保留 `package.json` 與 `package-lock.json`，需要本機 npm 套件時在 `frontend/` 執行 `npm ci` 還原。目前頁面由 CDN 載入 Bootstrap，啟動 Spring Boot 不需提交或打包 `node_modules`。
+
+`.gitignore` 不會自動取消已追蹤的檔案；移除誤提交內容須另開清理 PR，不要擅自改寫共享歷史。工具與文件也應有當前需求，避免把尚未需要的備用方案一併提交。
 
 提交修改：
 

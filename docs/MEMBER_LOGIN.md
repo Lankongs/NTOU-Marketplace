@@ -134,4 +134,4 @@ java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo
 
 ## MongoDB 與既有資料
 
-連線環境變數、商品分支整合範圍、H2 匯出與回復流程請見 [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md)。
+連線環境變數、商品分支整合範圍與既有資料說明請見 [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md)。
