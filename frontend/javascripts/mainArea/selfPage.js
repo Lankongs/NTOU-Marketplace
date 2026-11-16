@@ -283,14 +283,77 @@ function bindSidebar() {
       links.forEach((l) => l.classList.remove("active", "fw-bold", "bg-primary", "text-white"));
       link.classList.add("active", "fw-bold", "bg-primary", "text-white");
 
+      showSelfProducts();
       renderSelfCards();
     });
+  });
+}
+
+// 前端測試：沒有會員 ID 前，運費暫存於目前瀏覽器分頁的 sessionStorage。
+const SHIPPING_FEE_STORAGE_KEY = "ntou_marketplace_seller_shipping_fees_preview_v1";
+
+function showSelfProducts() {
+  document.getElementById("self-products-section").hidden = false;
+  document.getElementById("self-shipping-section").hidden = true;
+  document.getElementById("self-shipping-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+}
+
+function showShippingSettings() {
+  document.getElementById("self-products-section").hidden = true;
+  document.getElementById("self-shipping-section").hidden = false;
+  document.querySelectorAll(".self-sidebar [data-filter]").forEach((link) =>
+    link.classList.remove("active", "fw-bold", "bg-primary", "text-white")
+  );
+  document.getElementById("self-shipping-link").classList.add("active", "fw-bold", "bg-primary", "text-white");
+}
+
+function bindShippingSettings() {
+  const form = document.getElementById("shipping-settings-form");
+  const notice = document.getElementById("shipping-settings-notice");
+  document.getElementById("self-shipping-link").addEventListener("click", showShippingSettings);
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(SHIPPING_FEE_STORAGE_KEY) || "null");
+    if (saved && typeof saved === "object") {
+      for (const name of ["seven", "family", "post"]) {
+        const fee = saved[name];
+        if (Number.isInteger(fee) && fee >= 0) document.getElementById(`shipping-fee-${name}`).value = String(fee);
+      }
+    }
+  } catch (error) {
+    console.warn("無法讀取測試運費設定", error);
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const fees = {};
+    for (const name of ["seven", "family", "post"]) {
+      const input = document.getElementById(`shipping-fee-${name}`);
+      const amount = Number(input.value);
+      if (!input.value.trim() || !Number.isSafeInteger(amount) || amount < 0) {
+        notice.className = "alert alert-danger";
+        notice.textContent = "運費必須是 0 以上的整數。";
+        notice.hidden = false;
+        input.focus();
+        return;
+      }
+      fees[name] = amount;
+    }
+    try {
+      sessionStorage.setItem(SHIPPING_FEE_STORAGE_KEY, JSON.stringify({meet: 0, ...fees}));
+      notice.className = "alert alert-success";
+      notice.textContent = "已儲存前端測試運費。請回購物車重新勾選商品並進入結帳，才會帶入最新金額。";
+    } catch {
+      notice.className = "alert alert-danger";
+      notice.textContent = "儲存失敗，請檢查瀏覽器是否允許 sessionStorage。";
+    }
+    notice.hidden = false;
   });
 }
 
 function initSelfPage() {
   bindSidebar();
   bindEditForm();
+  bindShippingSettings();
   renderSelfCards();
 }
 

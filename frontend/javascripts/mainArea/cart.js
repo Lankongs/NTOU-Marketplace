@@ -326,6 +326,84 @@ function render() {
   $('cart-checkout').disabled = count === 0;
 }
 
+// ===== 7. 將勾選商品交給結帳頁（前端暫存） =====
+// 本階段不會建立訂單；等後端完成，再改成由 API 驗證商品與運費。
+const CHECKOUT_KEY = 'checkoutSelection';
+
+function checkoutMethods(product) {
+  // 未來商品可提供陣列，例如 ['meet', 'seven']。
+  const aliases = {
+    meet: 'meet', '校內面交': 'meet', '面交': 'meet',
+    seven: 'seven', '7-ELEVEN': 'seven', '7-11': 'seven', '7-ELEVEN 取貨': 'seven',
+    family: 'family', '全家': 'family', '全家取貨': 'family',
+    post: 'post', '郵寄': 'post', '郵寄包裹': 'post',
+    store: 'store', '超商取貨': 'store', '超商取貨 (7-11 / 全家)': 'store', '超商取貨（7-11／全家）': 'store', '超商取貨（7-11 / 全家）': 'store',
+  };
+  const source = product.shippingMethods ?? product.shipping ?? [];
+  const list = Array.isArray(source) ? source : [source];
+  // 商品只標示「超商取貨」時，結帳頁再讓買家選擇 7-ELEVEN 或全家。
+  // 選的是取貨品牌，不會在刊登商品階段強迫選定超商。
+  const methods = list.map(value => aliases[String(value).trim()]).filter(Boolean);
+  return [...new Set(methods.flatMap(value => value === 'store' ? ['seven', 'family'] : [value]))];
+}
+
+function openCheckout() {
+  currentView();
+  const chosen = currentItems.map(details).filter(data => selected.has(data.key) && data.active);
+  if (chosen.length === 0) {
+    notice('請先勾選可以購買的商品。', true);
+    return;
+  }
+
+  const invalidShipping = chosen.filter(data =>
+    checkoutMethods(currentProducts.get(String(data.item.productId)) || {}).length === 0
+  );
+  if (invalidShipping.length > 0) {
+    notice('以下商品的配送方式尚未明確指定，暫時無法進入結帳：' +
+      invalidShipping.map(data => data.name).join('、') +
+      '。請確認商品已設定支援的運送方式。', true);
+    return;
+  }
+
+  const items = chosen.map(data => {
+    const product = currentProducts.get(String(data.item.productId));
+    return {
+      productId: String(data.item.productId),
+      variant: String(data.item.variant || 'default'),
+      sellerId: data.sellerId,
+      sellerName: data.sellerName,
+      name: data.name,
+      image: data.image,
+      price: data.price,
+      quantity: data.item.qty,
+      shippingMethods: checkoutMethods(product),
+    };
+  });
+
+  // 目前尚無會員及後端：同一瀏覽器只能模擬一份賣家運費設定。
+  // 真正多賣家的運費必須在後端依 sellerId 分別取得，不能共用此設定。
+  const SHIPPING_FEE_STORAGE_KEY = 'ntou_marketplace_seller_shipping_fees_preview_v1';
+  let previewFees = {meet: 0, seven: 60, family: 60, post: 80};
+  let feeSource = 'default-demo';
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(SHIPPING_FEE_STORAGE_KEY) || 'null');
+    if (saved && ['seven', 'family', 'post'].every(name => Number.isSafeInteger(saved[name]) && saved[name] >= 0)) {
+      previewFees = {meet: 0, seven: saved.seven, family: saved.family, post: saved.post};
+      feeSource = 'browser-demo';
+    }
+  } catch (error) {
+    console.warn('測試運費設定讀取失敗，採用示範費率', error);
+  }
+  const sellerFees = {};
+  for (const item of items) sellerFees[item.sellerId] = {...previewFees};
+  try {
+    sessionStorage.setItem(CHECKOUT_KEY, JSON.stringify({items, sellerFees, previewFees: true, feeSource}));
+    window.location.assign('./checkout.html');
+  } catch {
+    notice('無法暫存結帳資料，請確認瀏覽器是否允許 sessionStorage。', true);
+  }
+}
+
 // ===== 7. 上方導覽列事件 =====
 function bindNav() {
   // 主頁按鈕：與新版 index.html 使用相同 ID。
@@ -389,10 +467,8 @@ async function init() {
     render();
   });
 
-  // 下單按鈕：正式訂單建立、拆單與庫存扣減尚未實作。
-  $('cart-checkout').addEventListener('click', () => {
-    notice('訂單功能將於後端整合階段開放，目前不會建立真實訂單。');
-  });
+  // 購物車勾選商品 → 暫存結帳資料 → 前往 checkout.html。
+  $('cart-checkout').addEventListener('click', openCheckout);
 
   if (DEMO) {
     $('cart-preview-hint').hidden = false;

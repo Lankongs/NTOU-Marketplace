@@ -78,12 +78,20 @@
               >
                 <i class="bi bi-hammer me-2 text-danger"></i>競標商品
               </a>
+              <hr class="mx-3 my-2" />
+              <!-- 運費設定：不使用 data-filter，避免影響原商品篩選 -->
+              <button type="button" id="self-shipping-link"
+                class="list-group-item list-group-item-action border-0 rounded-2 mx-2 mb-1 text-start"
+                style="width: calc(100% - 1rem);">
+                <i class="bi bi-truck me-2"></i>運費設定
+              </button>
             </div>
           </nav>
         </div>
 
         <!-- 右側主要內容區：商品卡片展示與操作 -->
         <div class="col-12 col-md-9 col-lg-10">
+          <section id="self-products-section">
           <div class="card shadow-sm border-0 bg-white p-4">
             <!-- 頂部標題與快速操作 -->
             <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom flex-wrap gap-2">
@@ -109,6 +117,40 @@
               class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-3"
             ></div>
           </div>
+          </section>
+
+          <!-- 新增：賣家統一運費設定（目前僅存於本瀏覽器 sessionStorage） -->
+          <section id="self-shipping-section" hidden>
+            <div class="card shadow-sm border-0 bg-white p-4">
+              <h3 class="fw-bold mb-2">運費設定</h3>
+              <p class="text-muted mb-4">同一位賣家、同一次結帳只收取一次運費。此為前端測試設定，正式版再與會員帳號及後端連接。</p>
+              <div id="shipping-settings-notice" class="alert alert-info" role="status" hidden></div>
+              <form id="shipping-settings-form">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">校內面交</label>
+                    <input class="form-control" type="text" value="NT$0（固定免運費）" disabled />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold" for="shipping-fee-seven">7-ELEVEN 運費（元）</label>
+                    <input id="shipping-fee-seven" class="form-control" type="number" min="0" step="1" placeholder="例如：60" required />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold" for="shipping-fee-family">全家運費（元）</label>
+                    <input id="shipping-fee-family" class="form-control" type="number" min="0" step="1" placeholder="例如：60" required />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold" for="shipping-fee-post">郵寄運費（元）</label>
+                    <input id="shipping-fee-post" class="form-control" type="number" min="0" step="1" placeholder="例如：80" required />
+                  </div>
+                </div>
+                <div class="mt-4 d-flex gap-2 align-items-center flex-wrap">
+                  <button class="btn btn-primary" type="submit">儲存運費設定</button>
+                  <span class="text-muted small">未設定的配送方式不能在正式系統被當作 0 元。</span>
+                </div>
+              </form>
+            </div>
+          </section>
         </div>
       </div>
     </div>
