@@ -18,6 +18,7 @@ public class Product {
     private String shipping;
     private String image;
     private List<String> tags;
+    private String status = "selling"; // 預設販售中
 
     // 直購商品欄位
     private Integer price;
@@ -25,6 +26,7 @@ public class Product {
 
     // 競標商品欄位
     private Integer startPrice;
+    private Integer currentPrice; // 目前最高出價
     private Integer bidIncrement;
     private String endTime; //競標時間先用 String 接收，正式實作競標規則前會改成更適合時間運算的型別；
     private Integer restrictedMinutes;
@@ -32,6 +34,7 @@ public class Product {
     public Product() {
     }
 
+    public String getStatus() { return status; }
     public String getId() { return id; }
     public String getType() { return type; }
     public String getName() { return name; }
@@ -45,4 +48,5 @@ public class Product {
     public Integer getBidIncrement() { return bidIncrement; }
     public String getEndTime() { return endTime; }
     public Integer getRestrictedMinutes() { return restrictedMinutes; }
+    public Integer getCurrentPrice() { return currentPrice; }
 }
