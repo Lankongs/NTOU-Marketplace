@@ -3,7 +3,7 @@ on:
   pull_request:
     paths: ['backend/**', 'frontend/**', '.github/workflows/backend.yml']
   push:
-    branches: [develop, main]
+    branches: [develop, main, 'codex/mongodb-migration']
 permissions:
   contents: read
 jobs:
