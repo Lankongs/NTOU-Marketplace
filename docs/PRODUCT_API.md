@@ -125,3 +125,90 @@ if (response.status === 401) {
 - 尚未完成：新增／修改／刪除商品持久化 API、交易完成後自動更新 `status`、出價 API、分頁、全文檢索、前端即時刷新。
 - 前端現有商品新增／編輯／刪除功能仍可能僅使用 `sessionStorage`，不代表已寫入 MongoDB。
 - 商品查詢目前受到登入保護；如需開放訪客瀏覽，應與登入負責人協調 SecurityConfig 的權限設計。
+
+
+## 商品下架與重新上架
+
+商品有三種狀態：
+
+| status | 說明 |
+|---|---|
+| `selling` | 販售中 |
+| `sold` | 已售出 |
+| `delisted` | 已下架 |
+
+### 一般商品查詢
+
+`GET /api/products`
+
+- 預設不顯示 `delisted` 商品。
+- 關鍵字搜尋、類型篩選、標籤篩選、價格排序也會排除已下架商品。
+- `status=selling`：查詢販售中商品。
+- `status=sold`：查詢已售出商品。
+- `status=delisted`：回傳 HTTP 400，避免查到其他賣家的已下架商品。
+
+### 查詢自己的商品
+
+`GET /api/products/mine`
+
+需要登入。
+
+回傳目前登入會員擁有的所有商品，包含：
+
+- `selling`
+- `sold`
+- `delisted`
+
+後端會根據登入身分取得會員 ID，不接受前端自行指定 `sellerId`。
+
+成功：HTTP 200，回傳商品陣列。
+
+未登入：HTTP 401。
+
+### 下架自己的商品
+
+`PATCH /api/products/{id}/delist`
+
+需要登入及有效的 CSRF Token。
+
+只有商品擁有者能將商品狀態從 `selling` 改為 `delisted`。
+
+成功：HTTP 200，回傳更新後的商品。
+
+### 重新上架自己的商品
+
+`PATCH /api/products/{id}/relist`
+
+需要登入及有效的 CSRF Token。
+
+只有商品擁有者能將商品狀態從 `delisted` 改為 `selling`。
+
+成功：HTTP 200，回傳更新後的商品。
+
+### 上下架錯誤狀態
+
+| HTTP 狀態碼 | 原因 |
+|---|---|
+| 401 | 尚未登入 |
+| 403 | 不是商品擁有者，或 CSRF 驗證失敗 |
+| 404 | 商品不存在 |
+| 409 | 商品目前狀態不允許此操作 |
+
+### CSRF Token
+
+執行 PATCH 請求前，先透過：
+
+`GET /api/auth/csrf`
+
+取得 CSRF Token，並將回傳的 `headerName` 和 `token` 放入 PATCH 請求的 Header。
+
+請求必須保留登入 Session Cookie。
+
+### 商品擁有者資料
+
+商品使用 `sellerId` 記錄擁有者的會員 ID。
+
+- `sellerId` 必須由後端根據登入會員身分設定。
+- 不可直接信任前端提供的 `sellerId`。
+- 沒有 `sellerId` 的舊商品不能透過上下架 API 修改狀態。
+- 目前商品建立 API 尚未整合，後續新增商品時必須由後端自動填入 `sellerId`。

@@ -11,6 +11,7 @@ public class Product {
 
     @Id
     private String id;
+    private Long sellerId;
 
     private String type;
     private String name;
@@ -34,6 +35,7 @@ public class Product {
     public Product() {
     }
 
+    public Long getSellerId() { return sellerId; }
     public String getStatus() { return status; }
     public String getId() { return id; }
     public String getType() { return type; }
