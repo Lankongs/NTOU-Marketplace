@@ -8,13 +8,16 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Map;
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import com.NTOUMarketplace.backend.MongoIntegrationTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -25,6 +28,8 @@ class AuthIntegrationTests extends MongoIntegrationTest {
     @Value("${local.server.port}") int port;
     @Autowired MemberRepository members;
     @Autowired MongoTemplate mongo;
+    @Autowired PasswordEncoder encoder;
+    @Autowired LoginThrottle throttle;
     private final ObjectMapper json = new ObjectMapper();
     private final CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
     private final HttpClient client = HttpClient.newBuilder().cookieHandler(cookies).followRedirects(HttpClient.Redirect.NEVER).build();
@@ -39,10 +44,61 @@ class AuthIntegrationTests extends MongoIntegrationTest {
     private String sessionId() { return cookies.getCookieStore().getCookies().stream().filter(c -> c.getName().equals("JSESSIONID")).findFirst().orElseThrow().getValue(); }
     private static final String VALID = "{\"account\":\"demo\",\"password\":\"Campus123!\"}";
 
+    @BeforeEach void resetLoginThrottle() {
+        throttle.success("127.0.0.1");
+    }
+
+    @Test void visitorCanRegisterAndLogInWithTheNewAccount() throws Exception {
+        String path = "/api/auth/register";
+        String password = "Campus456!";
+        String registration = json.writeValueAsString(Map.of(
+            "account", " New.Member ", "displayName", " 海大新生 ", "password", password));
+
+        assertTrue(get("/login.html").body().contains("/register.html"));
+        assertEquals(200, get("/register.html").statusCode());
+        assertEquals(200, get("/javascripts/auth/register.js").statusCode());
+        assertEquals(403, post(path, registration, null).statusCode());
+        JsonNode token = csrf();
+        var created = post(path, registration, token);
+        assertEquals(201, created.statusCode(), created.body());
+        assertFalse(created.body().contains(password));
+        assertEquals(401, get("/api/auth/me").statusCode());
+
+        String duplicate = registration.replace(" New.Member ", "new.member").replace(password, "Other456!");
+        assertEquals(409, post(path, duplicate, token).statusCode());
+        var member = members.find("new.member").orElseThrow();
+        assertEquals("海大新生", member.displayName());
+        assertNotEquals(password, member.passwordHash());
+        assertTrue(encoder.matches(password, member.passwordHash()));
+
+        var login = post("/api/auth/login", registration, token);
+        assertEquals(200, login.statusCode(), login.body());
+        assertEquals(member.id(), json.readTree(login.body()).get("user").get("id").asLong());
+    }
+
+    @Test void registrationRejectsInvalidInputBeforeCreatingAMember() throws Exception {
+        String path = "/api/auth/register";
+        JsonNode token = csrf();
+        String registration = "{\"account\":\"invalid-member\",\"displayName\":\"海大新生\",\"password\":\"Campus456!\"}";
+        assertEquals(400, post(path, "not JSON", token).statusCode());
+        assertEquals(400, post(path, registration.replace("invalid-member", "bad account"), token).statusCode());
+        var invalidName = post(path, registration.replace("海大新生", "  "), token);
+        assertEquals(400, invalidName.statusCode());
+        assertTrue(invalidName.body().contains("顯示名稱"));
+        assertEquals(400, post(path, registration.replace("Campus456!", "short"), token).statusCode());
+        assertEquals(400, post(path, registration.replace("Campus456!", "密".repeat(25)), token).statusCode());
+        assertTrue(members.find("invalid-member").isEmpty());
+    }
+
     @Test void completeBrowserSessionAndSecurityFlow() throws Exception {
         assertEquals(200, get("/login.html").statusCode());
-        assertEquals(200, get("/index.html").statusCode()); // 訪客首頁仍可使用
-        assertTrue(get("/index.html").body().contains("member-label"));
+        var home = get("/index.html");
+        assertEquals(200, home.statusCode()); // 訪客首頁仍可使用
+        assertTrue(home.body().contains("javascripts/topArea/initTop.js"));
+        assertTrue(home.body().contains("javascripts/auth/member.js"));
+        var navigationScript = get("/javascripts/topArea/initTop.js");
+        assertEquals(200, navigationScript.statusCode());
+        assertTrue(navigationScript.body().contains("id=\"member-label\""));
         assertEquals(404, get("/node_modules/bootstrap/package.json").statusCode());
         assertEquals(401, get("/api/auth/me").statusCode());
         assertEquals(401, get("/api/products").statusCode());
