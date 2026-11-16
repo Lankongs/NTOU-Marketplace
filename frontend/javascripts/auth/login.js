@@ -4,6 +4,9 @@ const account = document.querySelector('#account');
 const password = document.querySelector('#password');
 const submit = document.querySelector('#submit');
 const error = document.querySelector('#error');
+if (new URLSearchParams(location.search).get('registered') === '1') {
+  document.querySelector('#registerSuccess').hidden = false;
+}
 api('/api/auth/me').then(() => location.replace('/home')).catch(() => {});
 document.querySelector('#fillDemo').addEventListener('click', () => {
   account.value = 'demo'; password.value = 'Campus123!'; error.hidden = true; submit.focus();
