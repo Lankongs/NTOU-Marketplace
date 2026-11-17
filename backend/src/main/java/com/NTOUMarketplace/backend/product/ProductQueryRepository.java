@@ -44,17 +44,19 @@ public class ProductQueryRepository {
         }
 
 
-        if (status != null) {
-            if (status.equals("selling")) {
-                // 舊商品沒有 status 欄位時，暫時視為販售中
-                conditions.add(new Criteria().orOperator(
-                    Criteria.where("status").is("selling"),
-                    Criteria.where("status").exists(false),
-                    Criteria.where("status").is(null)
-                ));
-            } else if (status.equals("sold")) {
-                conditions.add(Criteria.where("status").is("sold"));
-            }
+
+        if (status == null) {
+            // 一般商品列表：不顯示已下架商品
+            conditions.add(Criteria.where("status").ne("delisted"));
+        } else if (status.equals("selling")) {
+            // 舊商品沒有 status 欄位時，暫時視為販售中
+            conditions.add(new Criteria().orOperator(
+                Criteria.where("status").is("selling"),
+                Criteria.where("status").exists(false),
+                Criteria.where("status").is(null)
+            ));
+        } else if (status.equals("sold")) {
+            conditions.add(Criteria.where("status").is("sold"));
         }
 
 
@@ -97,11 +99,6 @@ public class ProductQueryRepository {
             // 排序用的暫時欄位不需要回傳前端
             stages.add(context ->
                 new Document("$unset", "sortPrice"));
-        }
-
-        // 沒有條件時，直接讀取所有商品
-        if (stages.isEmpty()) {
-            return mongoTemplate.findAll(Product.class);
         }
 
         Aggregation aggregation = Aggregation.newAggregation(stages);

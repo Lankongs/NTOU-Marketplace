@@ -21,22 +21,22 @@ const demoProducts = [
   {
     id: 'demo1', type: 'direct', name: '計算機 Casio fx-991EX',
     price: 450, quantity: 5, image: '', sellerId: 'a',
-    sellerName: '海大二手小舖', status: 'active', shipping: '校內面交',
+    sellerName: '海大二手小舖', status: 'selling', shipping: '校內面交',
   },
   {
     id: 'demo2', type: 'direct', name: '資料結構與演算法原文書',
     price: 280, quantity: 3, image: '', sellerId: 'a',
-    sellerName: '海大二手小舖', status: 'active', shipping: '校內面交',
+    sellerName: '海大二手小舖', status: 'selling', shipping: '校內面交',
   },
   {
     id: 'demo3', type: 'direct', name: '無線藍牙滑鼠',
     price: 320, quantity: 8, image: '', sellerId: 'b',
-    sellerName: '基隆生活選物', status: 'active', shipping: '超商取貨',
+    sellerName: '基隆生活選物', status: 'selling', shipping: '超商取貨',
   },
   {
     id: 'demo4', type: 'direct', name: '校園紀念帆布袋',
     price: 180, quantity: 0, image: '', sellerId: 'b',
-    sellerName: '基隆生活選物', status: 'active', shipping: '校內面交',
+    sellerName: '基隆生活選物', status: 'sold', shipping: '校內面交',
   },
 ];
 
@@ -94,6 +94,7 @@ function details(item) {
     product &&
     product.type === 'direct' &&
     product.status !== 'delisted' &&
+    product.status !== 'sold' &&
     product.sellerStatus !== 'suspended' &&
     stock > 0
   );
@@ -103,7 +104,7 @@ function details(item) {
   else if (product.type !== 'direct') reason = '非直購商品';
   else if (product.sellerStatus === 'suspended') reason = '賣家已停權';
   else if (product.status === 'delisted') reason = '商品已下架';
-  else if (stock <= 0) reason = '商品已售完';
+  else if (product.status === 'sold' || stock <= 0) reason = '商品已售完';
 
   return {
     item,

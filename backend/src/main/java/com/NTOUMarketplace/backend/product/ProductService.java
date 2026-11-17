@@ -7,21 +7,35 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+
 @Service
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductQueryRepository queryRepository;
+    private final MongoTemplate mongoTemplate;
 
     public ProductService(
-            ProductRepository productRepository,
-            ProductQueryRepository queryRepository) {
-        this.productRepository = productRepository;
-        this.queryRepository = queryRepository;
+        ProductRepository productRepository,
+        ProductQueryRepository queryRepository,
+        MongoTemplate mongoTemplate) {
+
+    this.productRepository = productRepository;
+    this.queryRepository = queryRepository;
+    this.mongoTemplate = mongoTemplate;
+    }
+
+    public List<Product> getProductsBySellerId(Long sellerId) {
+        return productRepository.findBySellerId(sellerId);
     }
 
     public List<Product> getAllProducts() {
-        return productRepository.findAll();
+        return queryRepository.search(null, null, null, null, null);
     }
 
     public List<Product> searchProducts(String keyword) {
@@ -55,6 +69,12 @@ public class ProductService {
             );
         }
 
+        if ("delisted".equals(status)) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "已下架商品只能透過賣家商品管理 API 查詢"
+            );
+        }
 
         if (status != null
                 && !status.equals("selling")
@@ -65,13 +85,69 @@ public class ProductService {
             );
         }
 
+        return queryRepository.search(keyword, type, tag, sort, status);
+    }
 
-        if (keyword == null && type == null
-                && tag == null && sort == null && status == null) {
-            return getAllProducts();
+    public Product changeStatus(
+            String productId,
+            Long sellerId,
+            String expectedStatus,
+            String newStatus) {
+
+        // 只允許下架與重新上架兩種操作
+        boolean delist = expectedStatus.equals("selling")
+                && newStatus.equals("delisted");
+
+        boolean relist = expectedStatus.equals("delisted")
+                && newStatus.equals("selling");
+
+        if (!delist && !relist) {
+            throw new IllegalArgumentException("不允許的商品狀態轉換");
         }
 
-        return queryRepository.search(keyword, type, tag, sort, status);
+        // 同時檢查商品 ID、賣家 ID、目前狀態
+        Query query = Query.query(
+            Criteria.where("_id").is(productId)
+                .and("sellerId").is(sellerId)
+                .and("status").is(expectedStatus)
+        );
+
+        Update update = new Update()
+            .set("status", newStatus);
+
+        // 條件符合才更新，並取得更新後的商品
+        Product updated = mongoTemplate.findAndModify(
+            query,
+            update,
+            FindAndModifyOptions.options().returnNew(true),
+            Product.class
+        );
+
+        if (updated != null) {
+            return updated;
+        }
+
+        // 更新失敗，進一步判斷原因
+        Product product = productRepository.findById(productId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "找不到商品"
+            ));
+
+        // 沒有 sellerId 的舊商品也不能任意操作
+        if (product.getSellerId() == null
+                || !product.getSellerId().equals(sellerId)) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "你沒有權限修改這項商品"
+            );
+        }
+
+        // 商品存在、擁有者正確，但目前狀態不允許操作
+        throw new ResponseStatusException(
+            HttpStatus.CONFLICT,
+            "商品目前的狀態不允許此操作"
+        );
     }
 
     private String normalize(String value) {
