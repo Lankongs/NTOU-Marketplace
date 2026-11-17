@@ -194,7 +194,7 @@ async function handleAddToCart(product, button) {
         : `已將 ${quantity} 件「${product.name}」加入購物車！`
     );
   } catch (error) {
-    alert(error.message || "加入購物車失敗");
+    alert("錯誤："+error.message || "加入購物車失敗");
   } finally {
     button.dataset.cartBusy = "false";
     // 已售完或已下架的商品不可重新啟用加入按鈕。
@@ -464,7 +464,16 @@ function renderProductDetails(product) {
   // 5. 處理左側運送方式與右側商品描述
   const shippingEl = document.getElementById("detail-shipping");
   if (shippingEl) {
-    shippingEl.textContent = product.shipping || "校內面交";
+    shippingEl.innerHTML = "";
+    const shippingList = Array.isArray(product.shipping)
+      ? product.shipping
+      : [product.shipping];
+    shippingList.forEach((ship) => {
+      const badge = document.createElement("span");
+      badge.className = "badge bg-white text-dark border px-2 py-1 fs-6";
+      badge.textContent = ship;
+      shippingEl.appendChild(badge);
+    });
   }
 
   const descEl = document.getElementById("detail-desc");
