@@ -44,6 +44,7 @@ export function addToCart(product, qty = 1, variant = DEFAULT_VARIANT) {
   }
   if (product.type !== 'direct') throw new Error('只有直購商品可以加入購物車');
   if (product.status === 'delisted') throw new Error('已下架商品不可加入購物車');
+  if (product.status === 'sold') throw new Error('已售完商品不可加入購物車');
   //if (product.isOwnProduct === true) throw new Error('不能購買自己刊登的商品');
 
   const stock = Math.max(0, Math.floor(Number(product.quantity) || 0));
