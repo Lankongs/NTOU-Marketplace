@@ -1,3 +1,4 @@
+import { createPreviewOrders } from './orderPreviewStore.js';
 // 第二階段：前端結帳預覽。尚未接後端，絕不建立正式訂單。
 // 預留購物車接入格式：sessionStorage.setItem('checkoutSelection', JSON.stringify({items:[...], sellerFees:{...}}))
 // items: [{productId,sellerId,sellerName,name,price,quantity,image,shippingMethods:['meet','seven','family','post']}]
@@ -49,7 +50,7 @@ for (const group of groups.values()) {
 const sellers = [...groups.values()];
 notice.hidden = false;
 notice.textContent = isDemo
-  ? '目前是 demo=1 範例商品預覽，不會建立真實訂單。'
+  ? '目前是 demo=1 範例商品預覽，可建立本瀏覽器測試訂單，不會建立真實訂單。'
   : sellers.length === 0
     ? '目前沒有待結帳商品，請先回購物車勾選商品後再進入結帳。'
     : checkout.previewFees
@@ -126,9 +127,39 @@ submit.addEventListener('click',()=>{
   bootstrap.Modal.getOrCreateInstance(document.querySelector('#checkoutConfirmModal')).show();
 });
 document.querySelector('#checkout-preview-confirm').addEventListener('click',()=>{
-  bootstrap.Modal.getOrCreateInstance(document.querySelector('#checkoutConfirmModal')).hide();
-  notice.textContent='前端資料驗證與確認流程測試完成！尚未建立訂單，也沒有扣庫存或移除購物車商品。';
-  notice.className='alert alert-success';
-  window.scrollTo({top:0,behavior:'smooth'});
+  // 將每位賣家的配送表單資料保存成一張測試訂單，正式版須改由後端驗證與建立。
+  const drafts=sellers.map((group,index)=>{
+    const fields={};
+    const form=sellerContainer.querySelector(`[data-seller-index="${index}"] form.checkout-seller-form`);
+    for(const input of form.querySelectorAll('[name]')) fields[input.name]=input.value.trim();
+    let destination='';
+    if(group.method==='meet') destination=`${fields.meetingPlace}；${fields.meetingTime.replace('T',' ')}`;
+    else if(group.method==='seven'||group.method==='family') destination=`${fields.storeName}（店號 ${fields.storeCode}），${fields.storeAddress}`;
+    else destination=`${fields.postalCode} ${fields.address}`;
+    return {
+      sellerId:group.sellerId, sellerName:group.name, items:group.items,
+      shippingCode:group.method, shippingMethod:METHODS[group.method], shippingFee:Number(group.fees[group.method]),
+      destination, recipient:fields.recipientName||'', phone:fields.phone||'', shippingInfo:fields
+    };
+  });
+  const button=document.querySelector('#checkout-preview-confirm');
+  button.disabled=true;
+  try {
+    const created=createPreviewOrders(drafts);
+    sessionStorage.removeItem('checkoutSelection'); // 避免重新整理後重複送出同一份結帳草稿
+    bootstrap.Modal.getOrCreateInstance(document.querySelector('#checkoutConfirmModal')).hide();
+    notice.textContent=`已建立 ${created.length} 筆「前端測試訂單」。不會扣庫存、移除購物車或通知其他會員。`;
+    notice.className='alert alert-success'; notice.hidden=false;
+    submit.disabled=true;
+    // 透過 query string 開啟個人頁面的「我的購買訂單」。
+    window.location.assign('./selfPage.html?view=purchase');
+  } catch(error) {
+    button.disabled=false;
+    notice.textContent=`無法儲存測試訂單：${error.message}`;
+    notice.className='alert alert-danger';notice.hidden=false;
+    bootstrap.Modal.getOrCreateInstance(document.querySelector('#checkoutConfirmModal')).hide();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
 });
+
 renderSellers();

@@ -397,6 +397,10 @@ function initSelfPage() {
   bindPurchaseNavigation();
   bindSalesNavigation();
   renderSelfCards();
+  // 下單後自動開啟「我的購買訂單」，不影響原本側邊欄點擊行為。
+  const requestedView = new URLSearchParams(window.location.search).get('view');
+  if (requestedView === 'purchase') document.getElementById('self-purchase-link').click();
+  else if (requestedView === 'sales') document.getElementById('self-sales-link').click();
 }
 
 window.addEventListener("DOMContentLoaded", initSelfPage);

@@ -1,3 +1,4 @@
+import { getPreviewOrders, applyPreviewAction, PREVIEW_EVENT } from './orderPreviewStore.js';
 /**
  * 我的銷售訂單：第五階段前端互動預覽。
  * SAMPLE_ORDERS 僅在本頁記憶體，重新整理即還原。
@@ -39,6 +40,9 @@ const labels = {processing:'貨物處理中', completed:'已完成', cancelled:'
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => `NT$${Number(n || 0).toLocaleString('zh-TW')}`;
 const expanded = new Set();
+const previewTrackingDrafts = new Map();
+function allOrders(){ return [...getPreviewOrders(), ...SAMPLE_ORDERS]; }
+function findOrder(id){ return allOrders().find(o=>o.id===id); }
 let currentStatus = 'processing';
 let pendingAction = null;
 
@@ -91,7 +95,7 @@ function details(order) {
       <dt>${isMeet(order)?'交付狀態':'寄件狀態'}</dt><dd>${statusText(order)}</dd>
       ${order.trackingNumber?`<dt>寄件編號</dt><dd>${escapeHtml(order.trackingNumber)}</dd>`:''}
     </dl>
-    ${canManage && !isMeet(order) && !shippingDone && !locked ? `<div class="mt-3"><label class="form-label small fw-semibold" for="tracking-${escapeHtml(order.id)}">寄件編號（確認出貨前必填）</label><input id="tracking-${escapeHtml(order.id)}" class="form-control form-control-sm" maxlength="80" data-tracking-id="${escapeHtml(order.id)}" placeholder="請輸入實際寄件編號" value="${escapeHtml(order.draftTracking || '')}" /></div>`:''}
+    ${canManage && !isMeet(order) && !shippingDone && !locked ? `<div class="mt-3"><label class="form-label small fw-semibold" for="tracking-${escapeHtml(order.id)}">寄件編號（確認出貨前必填）</label><input id="tracking-${escapeHtml(order.id)}" class="form-control form-control-sm" maxlength="80" data-tracking-id="${escapeHtml(order.id)}" placeholder="請輸入實際寄件編號" value="${escapeHtml(order.source==='checkout-preview'?(previewTrackingDrafts.get(order.id)||''):(order.draftTracking||''))}" /></div>`:''}
     <h5 class="h6 fw-bold mt-4">金額明細</h5>
     <div class="d-flex justify-content-between mb-1"><span>商品小計</span><span>${money(subtotal(order))}</span></div>
     <div class="d-flex justify-content-between mb-1"><span>運費</span><span>${money(order.shippingFee)}</span></div>
@@ -122,7 +126,7 @@ function renderOrder(order) {
 function render() {
   const list = document.getElementById('sales-order-list');
   if (!list) return;
-  const found = SAMPLE_ORDERS.filter(order => order.status === currentStatus);
+  const found = allOrders().filter(order => order.status === currentStatus);
   list.innerHTML = found.length ? found.map(renderOrder).join('') : `<div class="alert alert-light border">這個分類目前沒有訂單。</div>`;
   document.querySelectorAll('#sales-order-tabs [data-sales-status]').forEach(button => {
     const active = button.dataset.salesStatus === currentStatus;
@@ -136,8 +140,8 @@ function openConfirm(order, action) {
   else if (action==='ship') {
     if (order.cancelStatus==='pending') return notice('取消申請尚未處理，不可出貨。',true);
     if (!isMeet(order) && order.paymentStatus!=='paid') return notice('請先確認收到匯款。',true);
-    if (!isMeet(order) && !order.draftTracking?.trim()) return notice('請先填寫寄件編號。',true);
-    description = isMeet(order) ? '請確認已實際將商品交給買家。確認後無法透過一般流程取消。' : `請確認商品已寄出，寄件編號為「${order.draftTracking}」。確認後無法透過一般流程取消。`;
+    if (!isMeet(order) && !(order.source==='checkout-preview'?(previewTrackingDrafts.get(order.id)||''):order.draftTracking)?.trim()) return notice('請先填寫寄件編號。',true);
+    description = isMeet(order) ? '請確認已實際將商品交給買家。確認後無法透過一般流程取消。' : `請確認商品已寄出，寄件編號為「${order.source==='checkout-preview'?(previewTrackingDrafts.get(order.id)||''):order.draftTracking}」。確認後無法透過一般流程取消。`;
   } else if (action==='request-cancel') description='取消申請必須由買家同意才能成立，送出後將暫停出貨。請填寫取消原因。';
   else if (action==='approve') description='同意買家的取消申請？此預覽會將示例訂單改為已取消；正式版須由後端恢復庫存。';
   else if (action==='reject') description='拒絕買家的取消申請？訂單將恢復一般處理狀態。';
@@ -153,9 +157,22 @@ function openConfirm(order, action) {
 function completeAction(event) {
   event.preventDefault();
   if (!pendingAction) return;
-  const order=SAMPLE_ORDERS.find(o=>o.id===pendingAction.id);
+  const order=findOrder(pendingAction.id);
   if (!order || order.status!=='processing') return;
   const action=pendingAction.action;
+  if (order.source==='checkout-preview') {
+    try {
+      const options={};
+      if (action==='ship') options.trackingNumber=previewTrackingDrafts.get(order.id)||'';
+      if (action==='request-cancel') options.reason=document.getElementById('sales-action-reason').value.trim();
+      applyPreviewAction(order.id,'seller',action,options);
+    } catch(error) { notice(error.message,true); return; }
+    window.bootstrap.Modal.getInstance(document.getElementById('salesActionModal')).hide();
+    pendingAction=null;
+    notice('已更新共用前端測試訂單；切換買家視角可看到相同狀態。');
+    render();
+    return;
+  }
   if (action==='payment' && order.paymentStatus==='unpaid') order.paymentStatus='paid';
   else if (action==='ship' && order.shipmentStatus==='pending' && order.cancelStatus!=='pending') {
     if (!isMeet(order) && (order.paymentStatus!=='paid' || !order.draftTracking?.trim())) return notice('出貨條件未符合。',true);
@@ -183,8 +200,9 @@ function init() {
   document.getElementById('sales-order-list')?.addEventListener('input',event=>{
     const input=event.target.closest('[data-tracking-id]');
     if (!input) return;
-    const order=SAMPLE_ORDERS.find(o=>o.id===input.dataset.trackingId);
-    if (order) order.draftTracking=input.value;
+    const order=findOrder(input.dataset.trackingId);
+    if (order?.source==='checkout-preview') previewTrackingDrafts.set(order.id,input.value);
+    else if(order) order.draftTracking=input.value;
   });
   document.getElementById('sales-order-list')?.addEventListener('click',event=>{
     const toggle=event.target.closest('[data-sales-toggle]');
@@ -195,10 +213,11 @@ function init() {
     }
     const button=event.target.closest('[data-sales-action]');
     if (!button) return;
-    const order=SAMPLE_ORDERS.find(o=>o.id===button.dataset.orderId);
+    const order=findOrder(button.dataset.orderId);
     if (order) openConfirm(order,button.dataset.salesAction);
   });
   document.getElementById('sales-action-form')?.addEventListener('submit',completeAction);
+  window.addEventListener(PREVIEW_EVENT,render);
   render();
 }
 window.addEventListener('DOMContentLoaded',init);

@@ -1,3 +1,4 @@
+import { getPreviewOrders, applyPreviewAction, PREVIEW_EVENT } from './orderPreviewStore.js';
 /**
  * 我的購買訂單 — 第一階段 UI 預覽
  * 僅提供固定的測試資料與頁籤／卡片展開互動；尚不建立、修改訂單。
@@ -79,14 +80,21 @@ function renderOrder(order) {
       <div class="d-flex justify-content-between mb-1"><span>商品小計</span><span>${money(subtotal)}</span></div>
       <div class="d-flex justify-content-between mb-2"><span>運費</span><span>${money(order.shippingFee)}</span></div>
       <div class="d-flex justify-content-between border-top pt-2 fw-bold"><span>應付總額</span><span>${money(subtotal + order.shippingFee)}</span></div>
-      ${order.cancelReason ? `<div class="alert alert-light border mt-3 mb-0">取消原因：${escapeHtml(order.cancelReason)}</div>` : ''}
+      ${order.cancelReason ? `<div class="alert alert-light border mt-3 mb-0">${order.cancelStatus === 'pending' ? '取消申請待回覆' : '取消原因'}：${escapeHtml(order.cancelReason)}</div>` : ''}
       ${order.status === 'processing' ? `
         <div class="d-flex flex-wrap gap-2 mt-4">
           <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="等待聊天室開發">聯絡賣家（開發中）</button>
-          ${order.shipmentStatus === 'pending' ? `<button type="button" class="btn btn-outline-danger btn-sm" disabled title="等待訂單後端整合">申請取消（待串接）</button>` : ''}
-          <button type="button" class="btn btn-primary btn-sm" disabled title="完成訂單需要真實買賣雙方狀態與後端驗證">完成訂單（待串接）</button>
+          ${order.source === 'checkout-preview' ? `
+            ${order.cancelStatus==='pending' && order.requestedBy==='seller' ? `
+              <button type="button" class="btn btn-outline-danger btn-sm" data-purchase-action="approve" data-order-id="${escapeHtml(order.id)}">同意取消</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-purchase-action="reject" data-order-id="${escapeHtml(order.id)}">拒絕取消</button>
+            ` : order.cancelStatus==='pending' ? '<span class="small text-muted">取消申請等待對方回覆，暫停出貨。</span>' : `
+              ${order.shipmentStatus==='pending' ? `<button type="button" class="btn btn-outline-danger btn-sm" data-purchase-action="request-cancel" data-order-id="${escapeHtml(order.id)}">申請取消</button>` : ''}
+              ${order.paymentStatus==='paid' && order.shipmentStatus==='shipped' ? `<button type="button" class="btn btn-primary btn-sm" data-purchase-action="complete" data-order-id="${escapeHtml(order.id)}">確認收貨並完成訂單</button>` : '<span class="small text-muted">完成訂單需等待賣家確認付款、寄件／交付。</span>'}
+            `}
+          ` : '<span class="small text-muted">舊版示範訂單不開放交易操作。</span>'}
         </div>
-        <p class="text-muted small mt-2 mb-0">操作按鈕暫不會更動訂單；正式版會檢查已付款、已寄出／交付及買家確認收到商品。</p>
+        <p class="text-muted small mt-2 mb-0">僅模擬本瀏覽器買家視角，尚無會員驗證；不會更動真正的庫存或交易。</p>
       ` : '<p class="text-muted small mt-3 mb-0">歷史訂單僅供查看，不提供修改。</p>'}
     </div>` : '';
 
@@ -119,7 +127,7 @@ function renderOrder(order) {
 function render() {
   const list = document.getElementById('purchase-order-list');
   if (!list) return;
-  const filtered = SAMPLE_ORDERS.filter((order) => order.status === currentStatus);
+  const filtered = [...getPreviewOrders(), ...SAMPLE_ORDERS].filter((order) => order.status === currentStatus);
   list.innerHTML = filtered.length
     ? filtered.map(renderOrder).join('')
     : '<div class="alert alert-light border">這個分類目前沒有訂單。</div>';
@@ -138,6 +146,27 @@ function init() {
     });
   });
   document.getElementById('purchase-order-list')?.addEventListener('click', (event) => {
+    const actionButton = event.target.closest('[data-purchase-action]');
+    if (actionButton) {
+      const id=actionButton.dataset.orderId, action=actionButton.dataset.purchaseAction;
+      const order=getPreviewOrders().find(o=>o.id===id);
+      if (!order) return;
+      try {
+        let options={};
+        if (action==='request-cancel') {
+          const reason=prompt(`訂單 #${id}：請輸入取消原因（送出後須賣家同意）`);
+          if (reason===null) return;
+          options.reason=reason.trim();
+          if (!options.reason) { alert('取消原因不可空白'); return; }
+        } else if (action==='complete') {
+          if (!confirm('請先確認已實際收到商品，並且付款與出貨狀態均已完成。確定完成這張測試訂單？')) return;
+          options.confirmReceived=true;
+        } else if (!confirm(action==='approve'?'同意取消這筆測試訂單？':'拒絕取消申請，繼續處理訂單？')) return;
+        applyPreviewAction(id,'buyer',action,options);
+      } catch(error) { alert(error.message); }
+      render();
+      return;
+    }
     const button = event.target.closest('[data-toggle-order]');
     if (!button) return;
     const id = button.dataset.toggleOrder;
@@ -145,6 +174,7 @@ function init() {
     else opened.add(id);
     render();
   });
+  window.addEventListener(PREVIEW_EVENT, render);
   render();
 }
 

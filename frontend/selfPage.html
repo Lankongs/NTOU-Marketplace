@@ -142,7 +142,7 @@
                 <h3 id="purchase-title" class="fw-bold mb-0">我的購買訂單</h3>
                 <span class="badge text-bg-secondary">前端測試資料</span>
               </div>
-              <p class="text-muted small mb-3">目前僅示範訂單分類與詳情展開，尚未串接結帳、會員或後端資料。</p>
+              <p class="text-muted small mb-3">本頁會顯示結帳產生的本瀏覽器測試訂單，以及原有示範卡片。尚無會員驗證或後端。</p>
               <!-- 橫向選單：不使用商品篩選的 data-filter -->
               <div id="purchase-order-tabs" class="purchase-order-tabs" role="group" aria-label="購買訂單分類">
                 <button type="button" class="purchase-tab active" data-order-status="processing" aria-pressed="true">貨物處理中</button>
@@ -160,7 +160,7 @@
                 <h3 id="sales-title" class="fw-bold mb-0">我的銷售訂單</h3>
                 <span class="badge text-bg-secondary">前端測試資料</span>
               </div>
-              <p class="text-muted small mb-3">付款、出貨與取消申請僅修改本頁測試資料；重新整理將恢復原狀，不會建立交易、發通知或扣庫存。</p>
+              <p class="text-muted small mb-3">可模擬賣家處理結帳產生的同一筆測試訂單，並同步顯示於購買訂單。尚無會員驗證，僅是本瀏覽器「賣家視角」，不會通知他人、扣庫存或建立真實交易。</p>
               <div id="sales-order-tabs" class="purchase-order-tabs" role="group" aria-label="銷售訂單分類">
                 <button type="button" class="purchase-tab active" data-sales-status="processing" aria-pressed="true">貨物處理中</button>
                 <button type="button" class="purchase-tab" data-sales-status="completed" aria-pressed="false">已完成</button>
@@ -222,7 +222,7 @@
                 <label for="sales-action-reason" class="form-label">取消原因（必填）</label>
                 <textarea id="sales-action-reason" class="form-control" rows="3" maxlength="300" placeholder="請輸入原因"></textarea>
               </div>
-              <p class="text-muted small mb-0 mt-3">這是前端操作示意，不會更新真實訂單。</p>
+              <p class="text-muted small mb-0 mt-3">這是前端操作示意，不會更新真實訂單或他人帳號。</p>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">返回</button>
