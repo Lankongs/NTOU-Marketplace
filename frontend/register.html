@@ -20,7 +20,7 @@
         <label for="account">帳號</label>
         <input id="account" name="account" autocomplete="username" autocapitalize="none"
                spellcheck="false" maxlength="100" aria-describedby="accountHint" required>
-        <p class="fine" id="accountHint">3 至 100 個英文字母、數字、底線、句點或連字號。</p>
+        <p class="fine" id="accountHint">請輸入至少 3 個字元。可使用英文字母、數字，以及 _、.、-。</p>
         <label for="displayName">顯示名稱</label>
         <input id="displayName" name="displayName" autocomplete="nickname" maxlength="100" required>
         <label for="email">海大信箱</label>
@@ -30,7 +30,7 @@
         <label for="password">密碼</label>
         <input id="password" name="password" type="password" autocomplete="new-password"
                minlength="8" maxlength="72" aria-describedby="passwordHint" required>
-        <p class="fine" id="passwordHint">至少 8 個字元，最多 72 個 UTF-8 位元組。</p>
+        <p class="fine" id="passwordHint">請輸入至少 8 個字元。</p>
         <label for="confirmPassword">確認密碼</label>
         <input id="confirmPassword" type="password" autocomplete="new-password" maxlength="72" required>
         <p id="error" class="error" role="alert" hidden></p>
