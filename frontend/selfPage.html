@@ -20,6 +20,9 @@
     <script type="module" src="./javascripts/topArea/initTop.js"></script>
     <script type="module" src="./javascripts/auth/member.js"></script>
     <script type="module" src="./javascripts/mainArea/selfPage.js"></script>
+    <script type="module" src="./javascripts/mainArea/purchaseOrders.js"></script>
+    <script type="module" src="./javascripts/mainArea/salesOrders.js"></script>
+    <link rel="stylesheet" href="./purchaseOrders.css" />
   </head>
   <body class="bg-light">
     <!--頂層欄位（由 initTop.js 動態渲染）-->
@@ -79,6 +82,19 @@
                 <i class="bi bi-hammer me-2 text-danger"></i>競標商品
               </a>
               <hr class="mx-3 my-2" />
+              <!-- 買家訂單：右側三個橫向頁籤，原商品篩選邏輯不變 -->
+              <button type="button" id="self-purchase-link"
+                class="list-group-item list-group-item-action border-0 rounded-2 mx-2 mb-1 text-start"
+                style="width: calc(100% - 1rem);">
+                <i class="bi bi-bag-check me-2"></i>我的購買訂單
+              </button>
+              <!-- 銷售訂單不共用商品 data-filter -->
+              <button type="button" id="self-sales-link"
+                class="list-group-item list-group-item-action border-0 rounded-2 mx-2 mb-1 text-start"
+                style="width: calc(100% - 1rem);">
+                <i class="bi bi-box-seam me-2"></i>我的銷售訂單
+              </button>
+              <hr class="mx-3 my-2" />
               <!-- 運費設定：不使用 data-filter，避免影響原商品篩選 -->
               <button type="button" id="self-shipping-link"
                 class="list-group-item list-group-item-action border-0 rounded-2 mx-2 mb-1 text-start"
@@ -119,6 +135,42 @@
           </div>
           </section>
 
+          <!-- 新增：我的購買訂單。此階段僅以前端測試資料示範。 -->
+          <section id="self-purchase-section" hidden aria-labelledby="purchase-title">
+            <div class="card shadow-sm border-0 bg-white p-4">
+              <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+                <h3 id="purchase-title" class="fw-bold mb-0">我的購買訂單</h3>
+                <span class="badge text-bg-secondary">前端測試資料</span>
+              </div>
+              <p class="text-muted small mb-3">目前僅示範訂單分類與詳情展開，尚未串接結帳、會員或後端資料。</p>
+              <!-- 橫向選單：不使用商品篩選的 data-filter -->
+              <div id="purchase-order-tabs" class="purchase-order-tabs" role="group" aria-label="購買訂單分類">
+                <button type="button" class="purchase-tab active" data-order-status="processing" aria-pressed="true">貨物處理中</button>
+                <button type="button" class="purchase-tab" data-order-status="completed" aria-pressed="false">已完成</button>
+                <button type="button" class="purchase-tab" data-order-status="cancelled" aria-pressed="false">不成立</button>
+              </div>
+              <div id="purchase-order-list" class="mt-3" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <!-- 我的銷售訂單：測試資料，買賣雙方尚未同步 -->
+          <section id="self-sales-section" hidden aria-labelledby="sales-title">
+            <div class="card shadow-sm border-0 bg-white p-4">
+              <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+                <h3 id="sales-title" class="fw-bold mb-0">我的銷售訂單</h3>
+                <span class="badge text-bg-secondary">前端測試資料</span>
+              </div>
+              <p class="text-muted small mb-3">付款、出貨與取消申請僅修改本頁測試資料；重新整理將恢復原狀，不會建立交易、發通知或扣庫存。</p>
+              <div id="sales-order-tabs" class="purchase-order-tabs" role="group" aria-label="銷售訂單分類">
+                <button type="button" class="purchase-tab active" data-sales-status="processing" aria-pressed="true">貨物處理中</button>
+                <button type="button" class="purchase-tab" data-sales-status="completed" aria-pressed="false">已完成</button>
+                <button type="button" class="purchase-tab" data-sales-status="cancelled" aria-pressed="false">不成立</button>
+              </div>
+              <div id="sales-order-notice" class="alert mt-3" role="status" hidden></div>
+              <div id="sales-order-list" class="mt-3" aria-live="polite"></div>
+            </div>
+          </section>
+
           <!-- 新增：賣家統一運費設定（目前僅存於本瀏覽器 sessionStorage） -->
           <section id="self-shipping-section" hidden>
             <div class="card shadow-sm border-0 bg-white p-4">
@@ -151,6 +203,32 @@
               </form>
             </div>
           </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- 銷售訂單操作確認 Modal：只操作前端示範資料 -->
+    <div class="modal fade" id="salesActionModal" tabindex="-1" aria-labelledby="salesActionModalTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="salesActionModalTitle">確認操作</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+          </div>
+          <form id="sales-action-form">
+            <div class="modal-body">
+              <p id="sales-action-description" class="mb-3"></p>
+              <div id="sales-action-reason-wrapper" hidden>
+                <label for="sales-action-reason" class="form-label">取消原因（必填）</label>
+                <textarea id="sales-action-reason" class="form-control" rows="3" maxlength="300" placeholder="請輸入原因"></textarea>
+              </div>
+              <p class="text-muted small mb-0 mt-3">這是前端操作示意，不會更新真實訂單。</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">返回</button>
+              <button type="submit" class="btn btn-primary" id="sales-action-confirm">確認</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

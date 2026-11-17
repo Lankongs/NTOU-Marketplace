@@ -295,16 +295,40 @@ const SHIPPING_FEE_STORAGE_KEY = "ntou_marketplace_seller_shipping_fees_preview_
 function showSelfProducts() {
   document.getElementById("self-products-section").hidden = false;
   document.getElementById("self-shipping-section").hidden = true;
+  document.getElementById("self-purchase-section").hidden = true;
+  document.getElementById("self-sales-section").hidden = true;
+  document.getElementById("self-sales-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+  document.getElementById("self-purchase-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
   document.getElementById("self-shipping-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
 }
 
 function showShippingSettings() {
   document.getElementById("self-products-section").hidden = true;
   document.getElementById("self-shipping-section").hidden = false;
+  document.getElementById("self-purchase-section").hidden = true;
+  document.getElementById("self-sales-section").hidden = true;
+  document.getElementById("self-sales-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+  document.getElementById("self-purchase-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
   document.querySelectorAll(".self-sidebar [data-filter]").forEach((link) =>
     link.classList.remove("active", "fw-bold", "bg-primary", "text-white")
   );
   document.getElementById("self-shipping-link").classList.add("active", "fw-bold", "bg-primary", "text-white");
+}
+
+// 訂單只切換顯示區塊；原商品的分類、編輯、上下架照常運作。
+function bindPurchaseNavigation() {
+  document.getElementById("self-purchase-link").addEventListener("click", () => {
+    document.getElementById("self-products-section").hidden = true;
+    document.getElementById("self-shipping-section").hidden = true;
+    document.getElementById("self-purchase-section").hidden = false;
+    document.getElementById("self-sales-section").hidden = true;
+    document.querySelectorAll(".self-sidebar [data-filter]").forEach((link) =>
+      link.classList.remove("active", "fw-bold", "bg-primary", "text-white")
+    );
+    document.getElementById("self-shipping-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+    document.getElementById("self-sales-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+    document.getElementById("self-purchase-link").classList.add("active", "fw-bold", "bg-primary", "text-white");
+  });
 }
 
 function bindShippingSettings() {
@@ -350,10 +374,28 @@ function bindShippingSettings() {
   });
 }
 
+function bindSalesNavigation() {
+  document.getElementById("self-sales-link").addEventListener("click", () => {
+    document.getElementById("self-products-section").hidden = true;
+    document.getElementById("self-shipping-section").hidden = true;
+    document.getElementById("self-purchase-section").hidden = true;
+    document.getElementById("self-sales-section").hidden = false;
+    document.querySelectorAll(".self-sidebar [data-filter]").forEach((link) =>
+      link.classList.remove("active", "fw-bold", "bg-primary", "text-white")
+    );
+    for (const id of ["self-purchase-link", "self-shipping-link"]) {
+      document.getElementById(id).classList.remove("active", "fw-bold", "bg-primary", "text-white");
+    }
+    document.getElementById("self-sales-link").classList.add("active", "fw-bold", "bg-primary", "text-white");
+  });
+}
+
 function initSelfPage() {
   bindSidebar();
   bindEditForm();
   bindShippingSettings();
+  bindPurchaseNavigation();
+  bindSalesNavigation();
   renderSelfCards();
 }
 
