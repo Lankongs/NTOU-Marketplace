@@ -40,6 +40,7 @@ const demoProducts = [
   },
 ];
 
+/** 建立 demo=1 使用的測試購物車項目。 */
 function defaultDemoItems() {
   return [
     { productId: 'demo1', variant: 'default', qty: 1 },
@@ -55,6 +56,7 @@ let currentItems = [];
 let currentProducts = new Map();
 
 // ===== 2. 畫面提示與商品資料 =====
+/** 在購物車頁面顯示一般提示或錯誤訊息。 */
 function notice(message, warning = false) {
   const node = $('cart-notice');
   node.textContent = message;
@@ -62,6 +64,7 @@ function notice(message, warning = false) {
   node.hidden = !message;
 }
 
+/** 取得目前購物車與商品資料；正式模式從 sessionStorage 同步商品清單。 */
 function currentView() {
   if (DEMO) {
     currentItems = demoItems;
@@ -80,6 +83,7 @@ function currentView() {
   }
 }
 
+/** 把購物車項目和商品資料整理成畫面所需的內容。 */
 function details(item) {
   const product = currentProducts.get(String(item.productId));
   const snapshot = item.snapshot || {};
@@ -117,6 +121,7 @@ function details(item) {
 }
 
 // ===== 3. 建立重複使用的 HTML 元素 =====
+/** 產生指定標籤與 CSS 類別的 HTML 元素。 */
 function el(tag, className = '', content = '') {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -124,6 +129,7 @@ function el(tag, className = '', content = '') {
   return node;
 }
 
+/** 建立帶有無障礙標籤的勾選框。 */
 function labelCheckbox(checked, disabled = false, ariaLabel = '') {
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
@@ -135,6 +141,7 @@ function labelCheckbox(checked, disabled = false, ariaLabel = '') {
 
 // ===== 4. 購物車單筆商品顯示 =====
 // 購物車商品：每件商品的圖片、名稱、價格、數量與刪除按鈕都在這裡建立。
+/** 建立單筆購物車商品列，包含勾選、數量和刪除操作。 */
 function itemNode(data) {
   const row = el('article', 'cart-item' + (data.active ? '' : ' invalid'));
 
@@ -214,6 +221,7 @@ function itemNode(data) {
 }
 
 // ===== 5. 購物車商品數量與刪除操作 =====
+/** 移除購物車中的指定商品或示範商品。 */
 function remove(data) {
   if (DEMO) {
     demoItems = demoItems.filter((item) => itemKey(item.productId, item.variant) !== data.key);
@@ -223,6 +231,7 @@ function remove(data) {
   }
 }
 
+/** 修改購物車商品數量，並限制不能超過庫存。 */
 function editQty(data, rawValue) {
   const value = Number(rawValue);
 
@@ -253,6 +262,7 @@ function editQty(data, rawValue) {
 }
 
 // ===== 6. 畫面渲染：賣家分組、全選與總金額 =====
+/** 依賣家分組重畫購物車，計算勾選數量與總額。 */
 function render() {
   currentView();
   const all = currentItems.map(details);
@@ -327,7 +337,95 @@ function render() {
   $('cart-checkout').disabled = count === 0;
 }
 
+// ===== 7. 將勾選商品交給結帳頁（前端暫存） =====
+// 本階段不會建立訂單；等後端完成，再改成由 API 驗證商品與運費。
+const CHECKOUT_KEY = 'checkoutSelection';
+
+/** 將商品儲存的配送名稱轉換成結帳頁識別碼。 */
+function checkoutMethods(product) {
+  // 未來商品可提供陣列，例如 ['meet', 'seven']。
+  const aliases = {
+    meet: 'meet', '校內面交': 'meet', '面交': 'meet',
+    seven: 'seven', '7-ELEVEN': 'seven', '7-11': 'seven', '7-ELEVEN 取貨': 'seven',
+    family: 'family', '全家': 'family', '全家取貨': 'family',
+    post: 'post', '郵寄': 'post', '郵寄包裹': 'post',
+    store: 'store', '超商取貨': 'store', '超商取貨 (7-11 / 全家)': 'store', '超商取貨（7-11／全家）': 'store', '超商取貨（7-11 / 全家）': 'store',
+  };
+  const source = product.shippingMethods ?? product.shipping ?? [];
+  const list = Array.isArray(source) ? source : [source];
+  // 商品只標示「超商取貨」時，結帳頁再讓買家選擇 7-ELEVEN 或全家。
+  // 選的是取貨品牌，不會在刊登商品階段強迫選定超商。
+  const methods = list.map(value => aliases[String(value).trim()]).filter(Boolean);
+  return [...new Set(methods.flatMap(value => value === 'store' ? ['seven', 'family'] : [value]))];
+}
+
+/** 將勾選商品寫入結帳暫存，限制一次僅同一位賣家，然後跳轉。 */
+function openCheckout() {
+  currentView();
+  const chosen = currentItems.map(details).filter(data => selected.has(data.key) && data.active);
+  if (chosen.length === 0) {
+    notice('請先勾選可以購買的商品。', true);
+    return;
+  }
+
+  // 同一輪前端結帳暫限一位賣家，避免在尚無正式身分與運費資料時錯誤拆單。
+  const sellerIds = new Set(chosen.map(data => data.sellerId));
+  if (sellerIds.size > 1) {
+    notice('目前一次只能向一位賣家結帳；請先勾選同一賣家的商品，其他商品會保留在購物車。', true);
+    return;
+  }
+
+  const invalidShipping = chosen.filter(data =>
+    checkoutMethods(currentProducts.get(String(data.item.productId)) || {}).length === 0
+  );
+  if (invalidShipping.length > 0) {
+    notice('以下商品的配送方式尚未明確指定，暫時無法進入結帳：' +
+      invalidShipping.map(data => data.name).join('、') +
+      '。請確認商品已設定支援的運送方式。', true);
+    return;
+  }
+
+  const items = chosen.map(data => {
+    const product = currentProducts.get(String(data.item.productId));
+    return {
+      productId: String(data.item.productId),
+      variant: String(data.item.variant || 'default'),
+      sellerId: data.sellerId,
+      sellerName: data.sellerName,
+      name: data.name,
+      image: data.image,
+      price: data.price,
+      quantity: data.item.qty,
+      shippingMethods: checkoutMethods(product),
+    };
+  });
+
+  // 目前尚無會員及後端：同一瀏覽器只能模擬一份賣家運費設定。
+  // 真正多賣家的運費必須在後端依 sellerId 分別取得，不能共用此設定。
+  const SHIPPING_FEE_STORAGE_KEY = 'ntou_marketplace_seller_shipping_fees_preview_v1';
+  let previewFees = {meet: 0, seven: 60, family: 60, post: 80};
+  let feeSource = 'default-demo';
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(SHIPPING_FEE_STORAGE_KEY) || 'null');
+    if (saved && ['seven', 'family', 'post'].every(name => Number.isSafeInteger(saved[name]) && saved[name] >= 0)) {
+      previewFees = {meet: 0, seven: saved.seven, family: saved.family, post: saved.post};
+      feeSource = 'browser-demo';
+    }
+  } catch (error) {
+    console.warn('測試運費設定讀取失敗，採用示範費率', error);
+  }
+  const sellerFees = {};
+  for (const item of items) sellerFees[item.sellerId] = {...previewFees};
+  try {
+    sessionStorage.setItem(CHECKOUT_KEY, JSON.stringify({items, sellerFees, previewFees: true, feeSource}));
+    window.location.assign('./checkout.html');
+  } catch {
+    notice('無法暫存結帳資料，請確認瀏覽器是否允許 sessionStorage。', true);
+  }
+}
+
 // ===== 7. 上方導覽列事件 =====
+/** 設定購物車頂部導覽列的按鈕事件。 */
 function bindNav() {
   // 主頁按鈕：與新版 index.html 使用相同 ID。
   $('to-home').addEventListener('click', () => {
@@ -390,10 +488,8 @@ async function init() {
     render();
   });
 
-  // 下單按鈕：正式訂單建立、拆單與庫存扣減尚未實作。
-  $('cart-checkout').addEventListener('click', () => {
-    notice('訂單功能將於後端整合階段開放，目前不會建立真實訂單。');
-  });
+  // 購物車勾選商品 → 暫存結帳資料 → 前往 checkout.html。
+  $('cart-checkout').addEventListener('click', openCheckout);
 
   if (DEMO) {
     $('cart-preview-hint').hidden = false;
