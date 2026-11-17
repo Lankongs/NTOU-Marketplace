@@ -120,7 +120,25 @@ export function createPreviewOrders(drafts, {updateCart=false}={}) {
   const nextProducts=structuredClone(products);
   const nextCart=structuredClone(cart);
   for (const product of nextProducts) if(stockChanges.has(String(product.id))) {
-    product.quantity=Number(product.quantity)-stockChanges.get(String(product.id));
+    product.quantity=Math.max(0, Number(product.quantity)-stockChanges.get(String(product.id)));
+    if (product.quantity <= 0) {
+      product.status = 'sold';
+    }
+  }
+  try {
+    const rawSelected = sessionStorage.getItem("ntou_selected_product");
+    if (rawSelected) {
+      const selected = JSON.parse(rawSelected);
+      if (selected && stockChanges.has(String(selected.id))) {
+        selected.quantity = Math.max(0, Number(selected.quantity) - stockChanges.get(String(selected.id)));
+        if (selected.quantity <= 0) {
+          selected.status = 'sold';
+        }
+        sessionStorage.setItem("ntou_selected_product", JSON.stringify(selected));
+      }
+    }
+  } catch (e) {
+    console.warn("同步更新選取商品暫存失敗：", e);
   }
   for (const item of nextCart) {
     const key=JSON.stringify([String(item.productId),String(item.variant||'default')]);
@@ -247,7 +265,12 @@ export function applyPreviewAction(orderId, role, action, options={}) {
     const changes=new Map();
     for (const item of order.items) changes.set(String(item.productId),(changes.get(String(item.productId))||0)+Number(item.quantity));
     const copy=structuredClone(products);
-    for (const product of copy) if(changes.has(String(product.id))) product.quantity=Number(product.quantity)+changes.get(String(product.id));
+    for (const product of copy) if(changes.has(String(product.id))) {
+      product.quantity=Number(product.quantity)+changes.get(String(product.id));
+      if (product.status === 'sold' && product.quantity > 0) {
+        product.status = 'selling';
+      }
+    }
     order.inventoryRestored=true;
     saveTogether(orders, readRequiredArray(CART_KEY), copy);
   } else writeOrders(orders);

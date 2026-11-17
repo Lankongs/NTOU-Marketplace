@@ -94,12 +94,21 @@ function initProductForm(formArea) {
       imageUrl = await readFileAsDataURL(imageInput.files[0]);
     }
 
-    // 3. 收集共用欄位（包含多標籤陣列 tags）
+    // 3. 收集共用欄位（包含多標籤陣列 tags 與多選運送方式 shipping）
+    const selectedShippings = Array.from(
+      document.querySelectorAll(".prod-shipping-cb:checked")
+    ).map((cb) => cb.value);
+
+    if (selectedShippings.length === 0) {
+      alert("請至少選擇一種運送方式！");
+      return;
+    }
+
     let productData = {
       type: selectedType, // "direct" 或 "auction"
       name: document.getElementById("prod-name").value,
       desc: document.getElementById("prod-desc").value,
-      shipping: document.getElementById("prod-shipping").value,
+      shipping: selectedShippings,
       image: imageUrl,
       tags: allTags,
       status: "selling", // selling: 販售中, delisted: 已下架, sold: 已售出

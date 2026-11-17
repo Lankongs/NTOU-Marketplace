@@ -92,13 +92,21 @@
 
               <!-- 【共用欄位】運送方式 -->
               <div class="mb-4">
-                <label for="prod-shipping" class="form-label">運送方式 <span class="text-danger">*</span></label>
-                <select class="form-select" id="prod-shipping" required>
-                  <option value="" disabled selected>請選擇運送方式</option>
-                  <option value="校內面交">校內面交</option>
-                  <option value="超商取貨 (7-11 / 全家)">超商取貨 (7-11 / 全家)</option>
-                  <option value="郵寄包裹">郵寄包裹</option>
-                </select>
+                <label class="form-label">運送方式 <span class="text-danger">*（可複選）</span></label>
+                <div class="d-flex flex-wrap gap-3 mt-1" id="prod-shipping-group">
+                  <div class="form-check">
+                    <input class="form-check-input prod-shipping-cb" type="checkbox" value="校內面交" id="ship-meet" checked>
+                    <label class="form-check-label" for="ship-meet">校內面交</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input prod-shipping-cb" type="checkbox" value="超商取貨 (7-11 / 全家)" id="ship-store">
+                    <label class="form-check-label" for="ship-store">超商取貨 (7-11 / 全家)</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input prod-shipping-cb" type="checkbox" value="郵寄包裹" id="ship-post">
+                    <label class="form-check-label" for="ship-post">郵寄包裹</label>
+                  </div>
+                </div>
               </div>
 
               <div class="d-flex justify-content-end gap-2">

@@ -8,7 +8,6 @@ import {
   syncCartWithCatalog,
   itemKey,
 } from './cartStore.js';
-import { api, post } from '../auth/api.js';
 
 // ===== 1. 頁面設定與示範商品 =====
 const DEMO = new URLSearchParams(location.search).get('demo') === '1';
@@ -419,66 +418,14 @@ function openCheckout() {
   try {
     sessionStorage.setItem(CHECKOUT_KEY, JSON.stringify({items, sellerFees, previewFees: true, feeSource}));
     window.location.assign('./checkout.html');
-  } catch {
+  } catch(e) {
+    console.error(e);
     notice('無法暫存結帳資料，請確認瀏覽器是否允許 sessionStorage。', true);
   }
 }
 
-// ===== 7. 上方導覽列事件 =====
-/** 設定購物車頂部導覽列的按鈕事件。 */
-function bindNav() {
-  // 主頁按鈕：與新版 index.html 使用相同 ID。
-  $('to-home').addEventListener('click', () => {
-    location.href = './index.html';
-  });
-  $('list-products-button').addEventListener('click', () => {
-    location.href = './addProducts.html';
-  });
-  $('shopping-cart-button').addEventListener('click', () => {
-    // 已在購物車頁面，不需要再次跳轉。
-  });
-  $('user-button').addEventListener('click', () => {
-    location.href = DEMO ? './selfPage.html' : './selfPage.html';
-  });
-  $('cart-search-button').addEventListener('click', () => {
-    location.href = './index.html';
-  });
-  $('cart-search').addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') location.href = './index.html';
-  });
-  $('logout-button').addEventListener('click', async () => {
-    try {
-      await post('/api/auth/logout');
-      location.href = './login.html';
-    } catch {
-      notice('伺服器錯誤', true);
-    }
-  });
-}
-
-// ===== 8. 登入檢查 =====
-async function checkAuth() {
-  if (DEMO) {
-    $('member-label').textContent = '示範會員';
-    return true;
-  }
-
-  try {
-    const user = await api('/api/auth/me');
-    $('member-label').textContent = user.displayName || user.name || user.account || '會員';
-    $('logout-button').hidden = false;
-    return true;
-  } catch {
-    location.href = './login.html';
-    return false;
-  }
-}
-
-// ===== 9. 頁面初始化 =====
+// ===== 8. 頁面初始化 =====
 async function init() {
-  bindNav();
-  if (!(await checkAuth())) return;
-
   $('cart-select-all-top').addEventListener('change', (event) => {
     currentView();
     for (const data of currentItems.map(details).filter((item) => item.active)) {

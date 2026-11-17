@@ -94,7 +94,7 @@ function renderCardToDOM(productData) {
           <div class="mb-2">${tagsBadgesHTML}</div>
           <p class="card-text text-muted small">${productData.desc || "無詳細介紹"}</p>
           <p class="card-text fw-bold mb-1 text-dark">${priceInfo}</p>
-          <small class="text-secondary">運送方式：${productData.shipping}</small>
+          <small class="text-secondary">運送方式：${(Array.isArray(productData.shipping) ? productData.shipping : [productData.shipping]).join("、")}</small>
         </div>
       `;
 

@@ -312,14 +312,23 @@
               </div>
 
               <div class="mb-3">
-                <label for="edit-prod-shipping" class="form-label fw-semibold">
-                  運送方式 <span class="text-danger">*</span>
+                <label class="form-label fw-semibold">
+                  運送方式 <span class="text-danger">*（可複選）</span>
                 </label>
-                <select class="form-select" id="edit-prod-shipping" required>
-                  <option value="校內面交">校內面交</option>
-                  <option value="超商取貨 (7-11 / 全家)">超商取貨 (7-11 / 全家)</option>
-                  <option value="郵寄包裹">郵寄包裹</option>
-                </select>
+                <div class="d-flex flex-wrap gap-3 mt-1" id="edit-prod-shipping-group">
+                  <div class="form-check">
+                    <input class="form-check-input edit-prod-shipping-cb" type="checkbox" value="校內面交" id="edit-ship-meet">
+                    <label class="form-check-label" for="edit-ship-meet">校內面交</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input edit-prod-shipping-cb" type="checkbox" value="超商取貨 (7-11 / 全家)" id="edit-ship-store">
+                    <label class="form-check-label" for="edit-ship-store">超商取貨 (7-11 / 全家)</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input edit-prod-shipping-cb" type="checkbox" value="郵寄包裹" id="edit-ship-post">
+                    <label class="form-check-label" for="edit-ship-post">郵寄包裹</label>
+                  </div>
+                </div>
               </div>
 
               <div class="mb-3">

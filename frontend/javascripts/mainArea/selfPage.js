@@ -131,7 +131,7 @@ function renderSelfCards() {
           <h5 class="card-title text-truncate mb-2 text-dark" title="${product.name}">${product.name}</h5>
           <p class="card-text text-muted small text-truncate mb-2">${product.desc || "無描述"}</p>
           <p class="card-text fw-bold text-dark mb-1 small">${priceText}</p>
-          <p class="card-text text-secondary small mb-3">運送方式：${product.shipping || "校內面交"}</p>
+          <p class="card-text text-secondary small mb-3">運送方式：${(Array.isArray(product.shipping) ? product.shipping : [product.shipping]).join("、")}</p>
 
           <div class="mt-auto pt-2 border-top d-flex gap-2 justify-content-between">
             <button type="button" class="btn btn-outline-primary btn-sm flex-fill btn-edit" data-id="${product.id}" ${isSold ? 'disabled title="已售出商品無法編輯"' : ""}>
@@ -217,13 +217,18 @@ function openEditModal(productId) {
   const priceLabel = document.getElementById("edit-prod-price-label");
   const qtyInput = document.getElementById("edit-prod-quantity");
   const qtyContainer = document.getElementById("edit-prod-quantity-container");
-  const shippingSelect = document.getElementById("edit-prod-shipping");
   const descInput = document.getElementById("edit-prod-desc");
 
   if (idInput) idInput.value = product.id;
   if (nameInput) nameInput.value = product.name || "";
   if (descInput) descInput.value = product.desc || "";
-  if (shippingSelect) shippingSelect.value = product.shipping || "校內面交";
+
+  const currentShippings = Array.isArray(product.shipping)
+    ? product.shipping
+    : [product.shipping];
+  document.querySelectorAll(".edit-prod-shipping-cb").forEach((cb) => {
+    cb.checked = currentShippings.includes(cb.value);
+  });
 
   if (product.type === "direct") {
     if (priceLabel) priceLabel.textContent = "直購價格 (NT$)";
@@ -260,8 +265,15 @@ function bindEditForm() {
     let imageInput = document.getElementById("edit-prod-image");
     const priceInput = document.getElementById("edit-prod-price");
     const qtyInput = document.getElementById("edit-prod-quantity");
-    const shippingSelect = document.getElementById("edit-prod-shipping");
     const descInput = document.getElementById("edit-prod-desc");
+
+    const selectedShippings = Array.from(
+      document.querySelectorAll(".edit-prod-shipping-cb:checked")
+    ).map((cb) => cb.value);
+    if (selectedShippings.length === 0) {
+      alert("請至少選擇一種運送方式！");
+      return;
+    }
 
     product.name = nameInput.value.trim();
     let imageUrl = "";
@@ -269,7 +281,7 @@ function bindEditForm() {
       imageUrl = await readFileAsDataURL(imageInput.files[0]);
       if(imageUrl !== "") product.image = imageUrl;
     }
-    product.shipping = shippingSelect.value;
+    product.shipping = selectedShippings;
     product.desc = descInput.value.trim();
 
     if (product.type === "direct") {
