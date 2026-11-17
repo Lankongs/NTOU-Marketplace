@@ -1,4 +1,4 @@
-import { getPreviewOrders, applyPreviewAction, PREVIEW_EVENT } from './orderPreviewStore.js';
+import { getPreviewOrders, applyPreviewAction, hasRequestedCancellation, PREVIEW_EVENT } from './orderPreviewStore.js';
 /**
  * 我的購買訂單 — 第一階段 UI 預覽
  * 僅提供固定的測試資料與頁籤／卡片展開互動；尚不建立、修改訂單。
@@ -39,17 +39,64 @@ const SAMPLE_ORDERS = [
 ];
 
 const statusLabels = { processing: '貨物處理中', completed: '已完成', cancelled: '已取消' };
+/** 將動態文字進行 HTML 跳脫，避免被當成標籤。 */
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]
 ));
+/** 將金額格式化為新台幣。 */
 const money = (value) => `NT$${Number(value).toLocaleString('zh-TW')}`;
+
+
+const VIEW_ROLE = 'buyer';
+/**
+ * 取消申請詳情只顯示一個資訊框：申請方、目前處理結果和原因。
+ * 同一筆訂單只允許一次申請，因此不需在畫面重複顯示歷史清單。
+ * 使用跳脫過的文字，避免使用者填寫的原因變成 HTML。
+ */
+function renderCancelDetail(order) {
+  const entry = Array.isArray(order.cancelHistory) ? order.cancelHistory[0] : null;
+  const reason = order.cancelReason || entry?.reason;
+  if (!reason) return '';
+  const requester = order.requestedBy || entry?.requestedBy;
+  const roleName = requester === 'seller' ? '賣家' : requester === 'buyer' ? '買家' : '雙方';
+  let state = '取消原因';
+  if (order.cancelStatus === 'pending') {
+    state = requester === VIEW_ROLE ? '取消申請待對方回覆' : '取消申請待回覆';
+  } else if (order.cancelStatus === 'rejected') {
+    state = '取消申請已拒絕';
+  } else if (order.cancelStatus === 'approved' || order.status === 'cancelled') {
+    state = '取消申請已同意';
+  }
+  return `<div class="alert alert-light border mt-3 mb-0" role="status">${roleName}${state}：${escapeHtml(reason)}</div>`;
+}
+
 const opened = new Set(); // 每張訂單獨立記錄展開狀態，可以同時展開多張。
 let currentStatus = 'processing';
 
+/**
+ * 依買家視角取得訂單摘要上的取消狀態標籤。
+ * 對方申請時顯示「待你回覆」，自己申請時顯示「等待賣家回覆」。
+ */
+function purchaseCancelBadge(order) {
+  if (order.status !== 'processing') return '';
+  if (order.cancelStatus === 'pending') {
+    const waitingMe = order.requestedBy === 'seller';
+    const text = waitingMe ? '賣家取消申請待回覆' : '買家取消申請中';
+    const style = waitingMe ? 'text-bg-danger' : 'text-bg-light border';
+    return `<span class="badge ${style} ms-1">${text}</span>`;
+  }
+  if (order.cancelStatus === 'rejected') {
+    return `<span class="badge text-bg-secondary ms-1">${order.requestedBy === 'seller' ? '賣家' : '買家'}取消申請已拒絕</span>`;
+  }
+  return '';
+}
+
+/** 計算單件商品乘上數量的小計。 */
 function itemSubtotal(item) {
   return item.unitPrice * item.quantity;
 }
 
+/** 組裝買家訂單卡片與展開詳情。 */
 function renderOrder(order) {
   const subtotal = order.items.reduce((sum, item) => sum + itemSubtotal(item), 0);
   const expanded = opened.has(order.id);
@@ -80,7 +127,7 @@ function renderOrder(order) {
       <div class="d-flex justify-content-between mb-1"><span>商品小計</span><span>${money(subtotal)}</span></div>
       <div class="d-flex justify-content-between mb-2"><span>運費</span><span>${money(order.shippingFee)}</span></div>
       <div class="d-flex justify-content-between border-top pt-2 fw-bold"><span>應付總額</span><span>${money(subtotal + order.shippingFee)}</span></div>
-      ${order.cancelReason ? `<div class="alert alert-light border mt-3 mb-0">${order.cancelStatus === 'pending' ? '取消申請待回覆' : '取消原因'}：${escapeHtml(order.cancelReason)}</div>` : ''}
+      ${renderCancelDetail(order)}
       ${order.status === 'processing' ? `
         <div class="d-flex flex-wrap gap-2 mt-4">
           <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="等待聊天室開發">聯絡賣家（開發中）</button>
@@ -88,8 +135,8 @@ function renderOrder(order) {
             ${order.cancelStatus==='pending' && order.requestedBy==='seller' ? `
               <button type="button" class="btn btn-outline-danger btn-sm" data-purchase-action="approve" data-order-id="${escapeHtml(order.id)}">同意取消</button>
               <button type="button" class="btn btn-outline-secondary btn-sm" data-purchase-action="reject" data-order-id="${escapeHtml(order.id)}">拒絕取消</button>
-            ` : order.cancelStatus==='pending' ? '<span class="small text-muted">取消申請等待對方回覆，暫停出貨。</span>' : `
-              ${order.shipmentStatus==='pending' ? `<button type="button" class="btn btn-outline-danger btn-sm" data-purchase-action="request-cancel" data-order-id="${escapeHtml(order.id)}">申請取消</button>` : ''}
+            ` : order.cancelStatus==='pending' ? '' : `
+              ${order.shipmentStatus==='pending' && !hasRequestedCancellation(order) ? `<button type="button" class="btn btn-outline-danger btn-sm" data-purchase-action="request-cancel" data-order-id="${escapeHtml(order.id)}">申請取消</button>` : ''}
               ${order.paymentStatus==='paid' && order.shipmentStatus==='shipped' ? `<button type="button" class="btn btn-primary btn-sm" data-purchase-action="complete" data-order-id="${escapeHtml(order.id)}">確認收貨並完成訂單</button>` : '<span class="small text-muted">完成訂單需等待賣家確認付款、寄件／交付。</span>'}
             `}
           ` : '<span class="small text-muted">舊版示範訂單不開放交易操作。</span>'}
@@ -105,10 +152,13 @@ function renderOrder(order) {
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
           <div>
-            <div class="fw-bold">訂單 #${escapeHtml(order.id)}</div>
+            <div class="fw-bold">訂單 #${escapeHtml(order.id)} ${order.isSharedDemo ? '<span class="badge text-bg-light border ms-1">模擬範例</span>' : ''}</div>
             <div class="small text-muted mt-1">${escapeHtml(order.createdAt)} · 賣家：${escapeHtml(order.sellerName)}</div>
           </div>
-          <span class="badge ${order.status === 'processing' ? 'text-bg-warning' : order.status === 'completed' ? 'text-bg-success' : 'text-bg-danger'}">${statusLabels[order.status]}</span>
+          <div class="d-flex flex-wrap gap-1 align-items-center">
+            <span class="badge ${order.status === 'processing' ? 'text-bg-warning' : order.status === 'completed' ? 'text-bg-success' : 'text-bg-danger'}">${statusLabels[order.status]}</span>
+            ${purchaseCancelBadge(order)}
+          </div>
         </div>
         <div class="mt-3">${escapeHtml(first.name)} × ${first.quantity}${otherCount ? `，另有 ${otherCount} 種商品` : ''}</div>
         <div class="d-flex justify-content-between gap-2 align-items-center mt-2 flex-wrap">
@@ -124,6 +174,7 @@ function renderOrder(order) {
     </article>`;
 }
 
+/** 依照頁籤篩選訂單並重新顯示列表。 */
 function render() {
   const list = document.getElementById('purchase-order-list');
   if (!list) return;
@@ -138,6 +189,7 @@ function render() {
   });
 }
 
+/** 綁定買家訂單的頁籤、展開和操作事件。 */
 function init() {
   document.querySelectorAll('#purchase-order-tabs [data-order-status]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -156,6 +208,7 @@ function init() {
         if (action==='request-cancel') {
           const reason=prompt(`訂單 #${id}：請輸入取消原因（送出後須賣家同意）`);
           if (reason===null) return;
+          if (!confirm('每張訂單只能提出一次取消申請；若對方拒絕，就不能再次申請。確定送出嗎？')) return;
           options.reason=reason.trim();
           if (!options.reason) { alert('取消原因不可空白'); return; }
         } else if (action==='complete') {

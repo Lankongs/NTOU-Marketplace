@@ -11,6 +11,18 @@ const demo = {
     {productId:'demo-calculator',sellerId:'demo-a',sellerName:'海大同學 A',name:'工程計算機',price:500,quantity:1,image:'',shippingMethods:['meet','seven','family']}
   ], sellerFees:{'demo-a':{meet:0,seven:60,family:60,post:80}}
 };
+// 兩位賣家的前端展示資料（?demo=multi），不需要正式會員或資料庫。
+// 測試賣家 A 有兩件商品、賣家 B 有一件商品，驗證自動拆單和各自運費。
+const multiSellerDemo = {
+  items: [
+    ...demo.items,
+    {productId:'demo-mouse',sellerId:'demo-b',sellerName:'海大同學 B',name:'二手滑鼠',price:220,quantity:1,image:'',shippingMethods:['seven','family','post']}
+  ],
+  sellerFees: {
+    ...demo.sellerFees,
+    'demo-b': {meet:0,seven:65,family:65,post:70}
+  }
+};
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = v => `NT$${Number(v).toLocaleString('zh-TW')}`;
 const notice = document.querySelector('#checkout-notice');
@@ -19,9 +31,9 @@ const summary = document.querySelector('#checkout-summary-lines');
 const submit = document.querySelector('#checkout-submit');
 let isDemo = false;
 let checkout = {items: [], sellerFees: {}};
-const useDemo = new URLSearchParams(location.search).get('demo') === '1';
-if (useDemo) {
-  checkout = demo;
+const demoMode = new URLSearchParams(location.search).get('demo');
+if (demoMode === '1' || demoMode === 'multi') {
+  checkout = demoMode === 'multi' ? multiSellerDemo : demo;
   isDemo = true;
 } else {
   try {
@@ -48,16 +60,20 @@ for (const group of groups.values()) {
   group.method = group.category==='store' ? '' : group.category;
 }
 const sellers = [...groups.values()];
-notice.hidden = false;
-notice.textContent = isDemo
-  ? '目前是 demo=1 範例商品預覽，可建立本瀏覽器測試訂單，不會建立真實訂單。'
-  : sellers.length === 0
-    ? '目前沒有待結帳商品，請先回購物車勾選商品後再進入結帳。'
-    : checkout.previewFees
-      ? checkout.feeSource === 'browser-demo' ? '已讀取本瀏覽器儲存的測試運費。注意：目前沒有賣家身分驗證，所有賣家分組暫用同一組測試運費；不會建立真實訂單。' : '目前使用預設示範運費（面交 0、7-ELEVEN／全家 60、郵寄 80 元）。可到個人頁面設定測試運費；不會建立真實訂單。'
-      : '已接收購物車商品；目前仍為前端預覽，不會建立真實訂單。';
+// 切換配送選項時保留同一位賣家、同一種運送方式下曾填寫的表單內容。
+const shippingDrafts = new Map();
+/**
+ * 結帳頁一般狀態不顯示測試說明，只在沒有待結帳商品時顯示提示。
+ * 必填錯誤、建立訂單失敗等訊息仍會由對應事件顯示。
+ */
+notice.hidden = sellers.length > 0;
+notice.className = 'alert alert-info';
+notice.textContent = sellers.length === 0
+  ? '目前沒有待結帳商品，請先回購物車勾選商品後再進入結帳。'
+  : '';
 document.querySelector('#checkout-back')?.addEventListener('click',()=>window.location.assign('cart.html'));
 
+/** 根據運送方式產生對應的收件／面交欄位。 */
 function shippingFields(method, id) {
   const field = (label, name, placeholder='', type='text') => `<div class="col-12 col-md-6"><label class="form-label" for="${id}-${name}">${label} <span class="text-danger">*</span></label><input class="form-control" required id="${id}-${name}" name="${name}" type="${type}" placeholder="${escapeHTML(placeholder)}"></div>`;
   if (method === 'meet') return `<p class="small text-muted">請先與賣家約好地點及時間。</p><div class="row g-3">${field('面交地點','meetingPlace','例如：海大圖書館一樓')}${field('面交時間','meetingTime','','datetime-local')}</div>`;
@@ -65,6 +81,7 @@ function shippingFields(method, id) {
   if (method === 'post') return `<div class="row g-3">${field('收件人姓名','recipientName')}${field('聯絡電話','phone','','tel')}${field('郵遞區號','postalCode')}${field('完整收件地址','address')}</div>`;
   return '<div class="text-danger">此賣家商品沒有可共同使用且已設定運費的配送方式，請返回購物車分開結帳。</div>';
 }
+/** 產生單一賣家訂單卡片，包含商品、運送選項及收件表單。 */
 function renderGroup(group, index) {
   const id = `seller-${index}`;
   const subtotal = group.items.reduce((sum,it)=>sum+it.price*it.quantity,0);
@@ -81,6 +98,26 @@ function renderGroup(group, index) {
   const payment = group.method === 'meet' ? '面交現金' : group.method ? '銀行匯款（賣家下單後提供匯款資訊）' : '選擇運送方式後顯示';
   return `<article class="card shadow-sm border-0 mb-4 checkout-seller-group" data-seller-index="${index}"><div class="card-body p-4"><h2 class="h5 fw-bold">賣家：${escapeHTML(group.name)}</h2>${itemsHTML}<div class="d-flex justify-content-between my-3"><span>商品小計</span><strong>${money(subtotal)}</strong></div><h3 class="h6 fw-bold mt-4">運送方式</h3><p class="text-muted small">同一張訂單只選擇一種運送方式，運費只收一次。超商品牌在這裡選擇。</p><div class="mb-2">${methodsHTML||'<p class="text-danger">無共同配送方式，請返回購物車調整商品。</p>'}</div>${brandsHTML}<form class="checkout-seller-form" novalidate><div class="checkout-form-panel p-3 rounded-3 mb-3"><h3 class="h6 fw-bold mb-3">${group.method?METHODS[group.method]+'資訊':'配送資訊'}</h3>${formContent}</div></form><h3 class="h6 fw-bold">付款方式</h3><p>${payment}</p><button type="button" class="btn btn-outline-secondary btn-sm" disabled>聯絡賣家（聊天室開發中）</button></div></article>`;
 }
+/** 保存目前卡片內輸入的值，以免切換超商品牌或配送方式後消失。 */
+function rememberShippingFields(article, group) {
+  if (!article || !group.method) return;
+  const values = {};
+  article.querySelectorAll('form.checkout-seller-form [name]').forEach(input => {
+    values[input.name] = input.value;
+  });
+  shippingDrafts.set(JSON.stringify([group.sellerId, group.method]), values);
+}
+
+/** 重新生成配送卡片後，還原該運送方式先前填過的資料。 */
+function restoreShippingFields(article, group) {
+  if (!article || !group.method) return;
+  const values = shippingDrafts.get(JSON.stringify([group.sellerId, group.method])) || {};
+  article.querySelectorAll('form.checkout-seller-form [name]').forEach(input => {
+    if (Object.hasOwn(values, input.name)) input.value = values[input.name];
+  });
+}
+
+/** 渲染全部賣家卡片，並監聽配送方式／超商品牌的變更。 */
 function renderSellers() {
   sellerContainer.innerHTML = sellers.length ? sellers.map(renderGroup).join('') : '<div class="alert alert-warning">沒有可結帳的商品，請返回購物車重新選取。</div>';
   // 使用事件委派，只更新目前賣家的卡片，不影響其他賣家已填寫的資料。
@@ -91,6 +128,7 @@ function renderSellers() {
     if(!article) return;
     const index=Number(article.dataset.sellerIndex);
     const group=sellers[index];
+    rememberShippingFields(article, group);
     if (input.matches('[data-delivery-category]')) {
       group.category=input.value;
       group.method=input.value==='store'?'':input.value;
@@ -99,13 +137,15 @@ function renderSellers() {
       group.method=input.value;
     }
     article.outerHTML=renderGroup(group,index);
+    restoreShippingFields(sellerContainer.querySelector(`[data-seller-index="${index}"]`), group);
     updateSummary();
   });
   updateSummary();
 }
+/** 計算各賣家商品小計與單次運費，並設定確認按鈕狀態。 */
 function updateSummary() {
   const subtotal = sellers.reduce((sum,g)=>sum+g.items.reduce((s,it)=>s+it.price*it.quantity,0),0);
-  const ready = sellers.length>0 && sellers.every(g=>g.method && Number.isFinite(Number(g.fees[g.method])));
+  const ready = sellers.length>0 && sellers.every(g=>g.common.length>0 && g.method && Number.isFinite(Number(g.fees[g.method])));
   const shipping = ready?sellers.reduce((sum,g)=>sum+Number(g.fees[g.method]),0):null;
   summary.innerHTML=sellers.map(g=>`<div class="d-flex justify-content-between gap-2 mb-2 checkout-summary-line"><span>${escapeHTML(g.name)}（${g.items.length} 種商品）</span><span>${g.method?`${METHODS[g.method]} ${money(g.fees[g.method])}`:g.category==='store'?'請選擇超商品牌':'未選配送'}</span></div>`).join('');
   document.querySelector('#checkout-subtotal').textContent=money(subtotal);
@@ -113,6 +153,7 @@ function updateSummary() {
   document.querySelector('#checkout-total').textContent=shipping==null?'—':money(subtotal+shipping);
   submit.disabled=!ready;
 }
+// 送出前驗證各個配送必填欄位，再開啟二次確認視窗。
 submit.addEventListener('click',()=>{
   let firstInvalid;
   for (const form of sellerContainer.querySelectorAll('form.checkout-seller-form')) {
@@ -121,11 +162,13 @@ submit.addEventListener('click',()=>{
       else input.classList.remove('is-invalid');
     }
   }
-  if(firstInvalid){ firstInvalid.focus();notice.textContent='請先填妥所有賣家的必填配送資料。';return; }
+  if(firstInvalid){ firstInvalid.focus();notice.textContent='請先填妥所有賣家的必填配送資料。';notice.className='alert alert-warning';notice.hidden=false;return; }
+  notice.hidden = true; // 驗證通過後隱藏先前的必填提醒。
   const total = document.querySelector('#checkout-total').textContent;
-  document.querySelector('#checkout-confirm-details').innerHTML=`<p>本次將向 <strong>${sellers.length}</strong> 位賣家購買商品（正式功能會建立 ${sellers.length} 張訂單）。</p><ul>${sellers.map(g=>`<li>${escapeHTML(g.name)}：${METHODS[g.method]}，運費 ${money(g.fees[g.method])}</li>`).join('')}</ul><p class="fw-bold">應付總額：${total}</p>`;
+  document.querySelector('#checkout-confirm-details').innerHTML=`<p>本次將向 <strong>${sellers.length}</strong> 位賣家購買商品（本次前端測試將分別建立 ${sellers.length} 張訂單）。</p><ul>${sellers.map(g=>`<li>${escapeHTML(g.name)}：${METHODS[g.method]}，運費 ${money(g.fees[g.method])}</li>`).join('')}</ul><p class="fw-bold">應付總額：${total}</p>`;
   bootstrap.Modal.getOrCreateInstance(document.querySelector('#checkoutConfirmModal')).show();
 });
+// 確認後建立本瀏覽器的測試訂單，並同步前端購物車與商品庫存。
 document.querySelector('#checkout-preview-confirm').addEventListener('click',()=>{
   // 將每位賣家的配送表單資料保存成一張測試訂單，正式版須改由後端驗證與建立。
   const drafts=sellers.map((group,index)=>{
@@ -145,10 +188,10 @@ document.querySelector('#checkout-preview-confirm').addEventListener('click',()=
   const button=document.querySelector('#checkout-preview-confirm');
   button.disabled=true;
   try {
-    const created=createPreviewOrders(drafts);
+    const created=createPreviewOrders(drafts, {updateCart: !isDemo});
     sessionStorage.removeItem('checkoutSelection'); // 避免重新整理後重複送出同一份結帳草稿
     bootstrap.Modal.getOrCreateInstance(document.querySelector('#checkoutConfirmModal')).hide();
-    notice.textContent=`已建立 ${created.length} 筆「前端測試訂單」。不會扣庫存、移除購物車或通知其他會員。`;
+    notice.textContent=`已建立 ${created.length} 筆前端測試訂單；${isDemo?'範例模式不修改購物車': '已扣除測試庫存並移除已下單購物車商品'}。不會通知其他會員。`;
     notice.className='alert alert-success'; notice.hidden=false;
     submit.disabled=true;
     // 透過 query string 開啟個人頁面的「我的購買訂單」。

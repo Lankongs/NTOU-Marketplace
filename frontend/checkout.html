@@ -146,8 +146,7 @@
               <div class="d-flex justify-content-between mb-2"><span>總運費</span><strong id="checkout-shipping-fee">—</strong></div>
               <hr />
               <div class="d-flex justify-content-between align-items-center mb-4"><strong>應付總額</strong><strong class="fs-4 text-primary" id="checkout-total">—</strong></div>
-              <button type="button" id="checkout-submit" class="btn btn-primary w-100 py-2" disabled>確認訂單（前端預覽）</button>
-              <p class="text-muted small mt-2 mb-0">目前僅驗證與預覽結帳資訊，不會建立真實訂單或扣庫存。</p>
+              <button type="button" id="checkout-submit" class="btn btn-primary w-100 py-2" disabled>確認訂單</button>
             </div>
           </div>
         </aside>
@@ -158,8 +157,8 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header"><h2 class="modal-title fs-5" id="checkoutConfirmTitle">請確認結帳資訊</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button></div>
-          <div class="modal-body"><div id="checkout-confirm-details"></div><p class="small text-muted mt-3 mb-0">目前為前端測試，不會建立訂單、扣除庫存或移除購物車商品。</p></div>
-          <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">返回修改</button><button type="button" id="checkout-preview-confirm" class="btn btn-primary">確認預覽</button></div>
+          <div class="modal-body"><div id="checkout-confirm-details"></div></div>
+          <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">返回修改</button><button type="button" id="checkout-preview-confirm" class="btn btn-primary">確認</button></div>
         </div>
       </div>
     </div>
