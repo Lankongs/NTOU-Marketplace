@@ -24,10 +24,16 @@ form.addEventListener('submit', async event => {
     await post('/api/auth/register', {
       account: form.elements.account.value.trim(),
       displayName: form.elements.displayName.value.trim(),
-      password: password.value
+      password: password.value,
+      email: form.elements.email.value.trim()
     });
     form.reset();
-    location.replace('/login.html?registered=1');
+    try {
+      sessionStorage.setItem('ntou_registration_success', '1');
+    } catch {
+      // Account creation already succeeded, so continue to login.
+    }
+    location.replace('/login.html');
   } catch (failure) {
     error.textContent = '註冊服務暫時無法使用，請稍後再試。';
     if (failure.status >= 400 && failure.status < 500) {

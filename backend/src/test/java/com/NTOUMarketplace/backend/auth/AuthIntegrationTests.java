@@ -46,13 +46,15 @@ class AuthIntegrationTests extends MongoIntegrationTest {
 
     @BeforeEach void resetLoginThrottle() {
         throttle.success("127.0.0.1");
+        throttle.success("register:127.0.0.1");
     }
 
     @Test void visitorCanRegisterAndLogInWithTheNewAccount() throws Exception {
         String path = "/api/auth/register";
         String password = "Campus456!";
         String registration = json.writeValueAsString(Map.of(
-            "account", " New.Member ", "displayName", " 海大新生 ", "password", password));
+            "account", " New.Member ", "displayName", " 海大新生 ", "password", password,
+            "email", "123456789@MAIL.NTOU.EDU.TW"));
 
         assertTrue(get("/login.html").body().contains("/register.html"));
         assertEquals(200, get("/register.html").statusCode());
@@ -64,10 +66,19 @@ class AuthIntegrationTests extends MongoIntegrationTest {
         assertFalse(created.body().contains(password));
         assertEquals(401, get("/api/auth/me").statusCode());
 
-        String duplicate = registration.replace(" New.Member ", "new.member").replace(password, "Other456!");
+        String duplicate = registration.replace(" New.Member ", "new.member").replace(password, "Other456!")
+            .replace("123456789@", "987654321@");
         assertEquals(409, post(path, duplicate, token).statusCode());
         var member = members.find("new.member").orElseThrow();
         assertEquals("海大新生", member.displayName());
+        assertEquals("123456789@mail.ntou.edu.tw", member.schoolEmail());
+        String duplicateEmail = registration.replace(" New.Member ", "another.member");
+        var conflict = post(path, duplicateEmail, token);
+        assertEquals(409, conflict.statusCode());
+        assertTrue(conflict.body().contains("此海大信箱已被使用"));
+        assertTrue(members.find("another.member").isEmpty());
+        assertThrows(org.springframework.dao.DuplicateKeyException.class, () ->
+            members.create("another.member", "測試使用者", member.passwordHash(), "123456789@MAIL.NTOU.EDU.TW"));
         assertNotEquals(password, member.passwordHash());
         assertTrue(encoder.matches(password, member.passwordHash()));
 
@@ -79,8 +90,10 @@ class AuthIntegrationTests extends MongoIntegrationTest {
     @Test void registrationRejectsInvalidInputBeforeCreatingAMember() throws Exception {
         String path = "/api/auth/register";
         JsonNode token = csrf();
-        String registration = "{\"account\":\"invalid-member\",\"displayName\":\"海大新生\",\"password\":\"Campus456!\"}";
+        String withoutEmail = "{\"account\":\"invalid-member\",\"displayName\":\"海大新生\",\"password\":\"Campus456!\"}";
+        String registration = withoutEmail.replace("}", ",\"email\":\"123456789@mail.ntou.edu.tw\"}");
         assertEquals(400, post(path, "not JSON", token).statusCode());
+        assertEquals(400, post(path, withoutEmail, token).statusCode());
         assertEquals(400, post(path, registration.replace("invalid-member", "bad account"), token).statusCode());
         var invalidName = post(path, registration.replace("海大新生", "  "), token);
         assertEquals(400, invalidName.statusCode());
@@ -90,8 +103,32 @@ class AuthIntegrationTests extends MongoIntegrationTest {
         assertTrue(members.find("invalid-member").isEmpty());
     }
 
+    @Test void registrationRejectsNonSchoolAndMalformedAddresses() throws Exception {
+        JsonNode token = csrf();
+        for (String email : new String[]{"member@gmail.com", "member@mail.ntou.edu.tw.example.com",
+                "member@fake-mail.ntou.edu.tw", "@mail.ntou.edu.tw"}) {
+            String registration = json.writeValueAsString(Map.of("account", "outside-member",
+                "displayName", "測試使用者", "password", "Campus456!", "email", email));
+            assertEquals(400, post("/api/auth/register", registration, token).statusCode(), email);
+        }
+        assertTrue(members.find("outside-member").isEmpty());
+    }
+
+    @Test void registrationRejectsEmailAlreadyUsedByAnOlderMember() throws Exception {
+        mongo.getCollection("members").insertOne(new Document("_id", 987654L)
+            .append("account", "legacy-email-member").append("schoolEmail", "Legacy.User@mail.ntou.edu.tw"));
+        String registration = json.writeValueAsString(Map.of("account", "new-email-member",
+            "displayName", "測試使用者", "password", "Campus456!", "email", "legacy.user@MAIL.NTOU.EDU.TW"));
+        var conflict = post("/api/auth/register", registration, csrf());
+        assertEquals(409, conflict.statusCode());
+        assertTrue(conflict.body().contains("此海大信箱已被使用"));
+        assertTrue(members.find("new-email-member").isEmpty());
+    }
+
     @Test void completeBrowserSessionAndSecurityFlow() throws Exception {
-        assertEquals(200, get("/login.html").statusCode());
+        var loginPage = get("/login.html");
+        assertEquals(200, loginPage.statusCode());
+        assertTrue(loginPage.body().contains("<form id=\"loginForm\" method=\"post\" action=\"/api/auth/login\">"));
         var home = get("/index.html");
         assertEquals(200, home.statusCode()); // 訪客首頁仍可使用
         assertTrue(home.body().contains("javascripts/topArea/initTop.js"));
@@ -129,6 +166,12 @@ class AuthIntegrationTests extends MongoIntegrationTest {
         assertFalse(products.body().contains("passwordHash"));
         assertTrue(login.headers().allValues("set-cookie").stream().anyMatch(v -> v.contains("HttpOnly") && v.contains("SameSite=Lax")));
         assertEquals(200, get("/api/auth/me").statusCode());
+        String registration = json.writeValueAsString(Map.of("account", "second-account", "displayName", "測試使用者",
+            "password", "Campus456!", "email", "second-account@mail.ntou.edu.tw"));
+        var blockedRegistration = post("/api/auth/register", registration, csrf());
+        assertEquals(409, blockedRegistration.statusCode());
+        assertTrue(blockedRegistration.body().contains("請先登出"));
+        assertTrue(members.find("second-account").isEmpty());
         assertEquals(302, get("/home").statusCode());
         assertEquals("/index.html", URI.create(get("/home").headers().firstValue("location").orElseThrow()).getPath());
         assertEquals(403, post("/api/auth/logout", "{}", token).statusCode()); // 登入前 token 已失效

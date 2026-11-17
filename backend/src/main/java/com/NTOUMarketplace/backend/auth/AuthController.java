@@ -3,6 +3,7 @@ package com.NTOUMarketplace.backend.auth;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final String SCHOOL_EMAIL_DOMAIN = "mail.ntou.edu.tw";
     private final AuthenticationManager manager;
     private final SecurityContextRepository contexts;
     private final MemberRepository members;
@@ -39,7 +41,8 @@ public class AuthController {
     public record RegisterRequest(
         @NotBlank @Size(max = 100) String account,
         @NotBlank @Size(max = 100) String displayName,
-        @NotBlank @Size(min = 8, max = 72) String password
+        @NotBlank @Size(min = 8, max = 72) String password,
+        @NotBlank @Email @Size(max = 254) String email
     ) {}
     public record MemberView(long id, String account, String displayName) {}
 
@@ -50,7 +53,10 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegisterRequest body,
-                                                        HttpServletRequest request) {
+                                                        HttpServletRequest request, Authentication authentication) {
+        if (authentication != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "你已登入，請先登出再註冊新帳號。"));
+        }
         String account = normalizeAccount(body.account());
         if (!account.matches("[a-z0-9._-]{3,100}")) {
             return ResponseEntity.badRequest().body(Map.of("message", "帳號須為 3 至 100 個英文字母、數字、底線、句點或連字號。"));
@@ -58,18 +64,29 @@ public class AuthController {
         if (body.password().getBytes(StandardCharsets.UTF_8).length > 72) {
             return ResponseEntity.badRequest().body(Map.of("message", "密碼不可超過 72 個 UTF-8 位元組。"));
         }
+        int domainStart = body.email().lastIndexOf('@') + 1;
+        if (!SCHOOL_EMAIL_DOMAIN.equalsIgnoreCase(body.email().substring(domainStart))) {
+            return ResponseEntity.badRequest().body(Map.of("message", "請使用 @mail.ntou.edu.tw 的海大信箱。"));
+        }
+        String schoolEmail = body.email().substring(0, domainStart) + SCHOOL_EMAIL_DOMAIN;
         if (!throttle.allow("register:" + request.getRemoteAddr())) {
             return ResponseEntity.status(429).header("Retry-After", "900")
                 .body(Map.of("message", "註冊嘗試過於頻繁，請於 15 分鐘後再試。"));
         }
 
+        if (members.schoolEmailInUse(schoolEmail)) return schoolEmailInUse();
         try {
-            members.create(account, body.displayName().strip(), encoder.encode(body.password()));
+            members.create(account, body.displayName().strip(), encoder.encode(body.password()), schoolEmail);
         } catch (DuplicateKeyException ex) {
+            if (members.schoolEmailInUse(schoolEmail)) return schoolEmailInUse();
             if (members.find(account).isEmpty()) throw ex;
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "此帳號已被使用。"));
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "註冊成功，請登入。"));
+    }
+
+    private static ResponseEntity<Map<String, String>> schoolEmailInUse() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "此海大信箱已被使用。"));
     }
 
     @PostMapping("/login")

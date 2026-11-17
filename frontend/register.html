@@ -23,6 +23,10 @@
         <p class="fine" id="accountHint">3 至 100 個英文字母、數字、底線、句點或連字號。</p>
         <label for="displayName">顯示名稱</label>
         <input id="displayName" name="displayName" autocomplete="nickname" maxlength="100" required>
+        <label for="email">海大信箱</label>
+        <input id="email" name="email" type="email" autocomplete="email" autocapitalize="none"
+               spellcheck="false" maxlength="254" aria-describedby="emailHint" required>
+        <p class="fine" id="emailHint">請填寫以 @mail.ntou.edu.tw 結尾的信箱。</p>
         <label for="password">密碼</label>
         <input id="password" name="password" type="password" autocomplete="new-password"
                minlength="8" maxlength="72" aria-describedby="passwordHint" required>

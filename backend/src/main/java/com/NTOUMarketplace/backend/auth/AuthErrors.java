@@ -14,7 +14,7 @@ public class AuthErrors {
     ResponseEntity<?> invalidInput(HttpServletRequest request) {
         if ("/api/auth/register".equals(request.getServletPath())) {
             return ResponseEntity.badRequest().body(Map.of("message",
-                "請填寫有效的帳號、1 至 100 字的顯示名稱，以及至少 8 字的密碼。"));
+                "請填寫有效的帳號、1 至 100 字的顯示名稱、至少 8 字的密碼及海大信箱。"));
         }
         return ResponseEntity.badRequest().body(Map.of("message", "請填寫有效的帳號與密碼。"));
     }
