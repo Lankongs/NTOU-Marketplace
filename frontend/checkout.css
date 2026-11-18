@@ -1,0 +1,14 @@
+/* 結帳頁專屬樣式，不更動網站共用 style.css */
+.checkout-page { max-width: 1440px; margin: 0 auto; }
+.checkout-seller-group, .checkout-summary { border-radius: 14px; }
+.checkout-product-photo { width: 64px; height: 64px; flex: 0 0 64px; border-radius: 10px; background: #f0f2f5; overflow: hidden; }
+.checkout-product-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.checkout-form-panel { background: #f8f9fa; border: 1px solid #e5e8eb; }
+.checkout-seller-group .form-label { margin-bottom: .3rem; }
+.checkout-summary-line { font-size: .9rem; }
+@media (min-width: 992px) { .checkout-summary { position: sticky; top: 24px; } }
+@media (max-width: 575.98px) { .checkout-product-photo { width: 52px; height: 52px; flex-basis: 52px; } }
+
+/* 超商取貨：在結帳頁先選取貨類別，再選 7-ELEVEN／全家 */
+.checkout-store-choices { background: #edf5ff; border: 1px solid #cfe2ff; }
+.checkout-store-choices .form-check-label { cursor: pointer; }

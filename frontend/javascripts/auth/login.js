@@ -4,10 +4,19 @@ const account = document.querySelector('#account');
 const password = document.querySelector('#password');
 const submit = document.querySelector('#submit');
 const error = document.querySelector('#error');
-api('/api/auth/me').then(() => location.replace('/home')).catch(() => {});
-document.querySelector('#fillDemo').addEventListener('click', () => {
-  account.value = 'demo'; password.value = 'Campus123!'; error.hidden = true; submit.focus();
+const registerSuccess = document.querySelector('#registerSuccess');
+try {
+  if (sessionStorage.getItem('ntou_registration_success') === '1') {
+    sessionStorage.removeItem('ntou_registration_success');
+    registerSuccess.hidden = false;
+  }
+} catch {
+  // The login page still works if the browser blocks session storage.
+}
+window.addEventListener('pageshow', event => {
+  if (event.persisted) registerSuccess.hidden = true;
 });
+api('/api/auth/me').then(() => location.replace('/home')).catch(() => {});
 document.querySelector('#togglePassword').addEventListener('click', event => {
   const visible = password.type === 'password';
   password.type = visible ? 'text' : 'password';

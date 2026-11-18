@@ -3,6 +3,7 @@ package com.NTOUMarketplace.backend.auth;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -43,6 +44,7 @@ public class SecurityConfig {
             .securityContext(context -> context.securityContextRepository(contexts))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/csrf", "/api/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                 .requestMatchers("/api/**", "/home").authenticated()
                 .anyRequest().permitAll())
             // 保留預設 Session CSRF 保護。前端先取得 token，再透過回傳的 headerName 傳送。

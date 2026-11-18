@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>購物車 - NTOU Marketplace</title>
+
+    <!-- 與首頁共用的樣式和 Bootstrap -->
+    <link rel="stylesheet" href="style.css" />
+     <!-- Bootstrap 5 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <link rel="stylesheet" href="./cart.css" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="./javascripts/topArea/initTop.js"></script>
+    <script type="module" src="./javascripts/auth/member.js"></script>
+    <script type="module" src="./javascripts/mainArea/cart.js"></script>
+  </head>
+
+  <body class="ntou-cart-page">
+    <!--頂層欄位（由 initTop.js 動態渲染）-->
+    <div id="top-navbar"></div>
+
+    <!-- 購物車主要內容：參考刊登頁的白色卡片與 Bootstrap 細邊框 -->
+    <main class="container-fluid cart-page-content py-4 px-md-5">
+      <div class="cart-content-panel bg-white border rounded-3 p-3 p-md-4">
+        <!-- 頁面標題 -->
+        <div class="cart-heading d-flex justify-content-between align-items-center gap-3 flex-wrap border-bottom pb-3 mb-4">
+          <h1 class="fw-bold mb-0">
+            購物車
+            <span class="cart-title-count" id="cart-item-count">0 件商品</span>
+          </h1>
+          <a href="./index.html" class="btn btn-outline-secondary btn-sm">← 返回主頁</a>
+        </div>
+
+        <!-- 購物車提示訊息 -->
+        <div id="cart-notice" class="alert alert-info" role="status" hidden></div>
+
+        <!-- 購物車商品區與右側訂單摘要 -->
+        <div class="cart-columns">
+          <section class="cart-list-column" aria-label="購物車商品">
+            <!-- 全選商品與賣家數 -->
+            <div id="cart-list-toolbar" class="cart-list-toolbar">
+              <label class="cart-checkbox-label" for="cart-select-all-top">
+                <input type="checkbox" id="cart-select-all-top" />
+                <span>全選商品</span>
+              </label>
+              <span id="cart-seller-summary">0 個賣家</span>
+            </div>
+
+            <!-- 購物車商品位置：cart.js 會依照賣家動態產生商品卡 -->
+            <div id="cart-seller-groups"></div>
+
+            <!-- 沒有購物車商品時的畫面 -->
+            <section id="cart-empty" class="cart-empty" hidden>
+              <i class="bi bi-bag fs-1 text-secondary"></i>
+              <h2 class="fs-5 fw-bold mt-3">開始購物吧</h2>
+              <a href="./index.html" class="btn btn-primary mt-3">前往商品列表</a>
+            </section>
+          </section>
+
+          <!-- 訂單摘要：只計算已勾選的有效商品 -->
+          <aside class="cart-summary" aria-label="購物明細">
+            <h2>訂單摘要</h2>
+            <div class="cart-summary-row">
+              <span>已選商品</span>
+              <strong id="cart-selected-count">0 件</strong>
+            </div>
+            <div class="cart-summary-row">
+              <span>商品小計</span>
+              <strong id="cart-subtotal">NT$ 0</strong>
+            </div>
+            <div class="cart-summary-note">此階段只計算商品小計，尚未包含運費與優惠券。</div>
+            <div class="cart-summary-total">
+              <span>合計</span>
+              <strong id="cart-total">NT$ 0</strong>
+            </div>
+            <!-- 下單按鈕：正式訂單 API 尚未完成 -->
+            <button id="cart-checkout" class="cart-checkout" type="button" disabled>
+              下單
+            </button>
+          </aside>
+        </div>
+
+        <!-- 測試畫面：使用 cart.html?demo=1 預覽商品 -->
+        <div id="cart-preview-hint" class="cart-preview-hint" hidden>
+          <span>示範模式：商品不會存入正式資料庫。</span>
+          <button type="button" id="cart-reset-demo">重設示範</button>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

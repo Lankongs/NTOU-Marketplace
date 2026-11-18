@@ -1,53 +1,200 @@
-let cards = [];
+const STORAGE_KEY = "ntou_marketplace_cards";
+const CURRENT_CATEGORY = "last_page";
 
-function addCards(productData) {
-  // 1. 將表單送來的物件推入陣列中儲存，連後端後會改
-  cards.push(productData);
+// 用於相容舊資料，可考慮不使用
+function normalizeCardTags(card) {
+  if (Array.isArray(card.tags) && card.tags.length > 0) {
+    return card.tags;
+  }
+  // 相容舊資料，以防萬一
+  return [];
+}
 
-  // 2. 取得首頁放商品卡的區域
+// 讀取商品，裡面應該會有一個 GET 請求取得商品陣列
+// AI 是建議限定某些範圍內去呼叫，比如一次呼叫20個、選了某些標籤再呼叫一次、選一個商品再呼叫……etc
+// 上面方法是為了不讓壓力給到本地篩選，以免暫存區容量爆炸，下面的function都可以考量這些情況
+// （變成這整個js都只呼叫 GET ）
+function loadStoredCards() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.map((card, idx) => ({
+          ...card,
+          id: card.id || `prod_${idx}_${Date.now()}`,
+          tags: normalizeCardTags(card),
+        }))
+      : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// 更新商品
+function saveStoredCards(cards) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+  } catch (e) {
+    console.warn("無法將商品暫存至 sessionStorage：", e);
+  }
+}
+
+let cards = loadStoredCards();
+
+// 商品卡片製作
+function renderCardToDOM(productData) {
   const cardsArea = document.getElementById("cards-lists-area");
   if (!cardsArea) return;
 
-  // 3. 判斷要顯示直購價格還是競標資訊
+  const tags = normalizeCardTags(productData);
+
+  // 判斷要顯示直購價格還是競標資訊
+  const currentAuctionPrice = productData.currentPrice ?? productData.startPrice ?? 0;
   const priceInfo =
     productData.type === "direct"
       ? `價格：NT$ ${productData.price} | 庫存：${productData.quantity}`
-      : `起標價：NT$ ${productData.startPrice} | 結標時間：${formatDateTime(productData.endTime)}`;
+      : `目前出價：NT$ ${currentAuctionPrice} | 結標時間：${formatDateTime(productData.endTime)}`;
 
   const typeBadge =
     productData.type === "direct"
       ? `<span class="badge bg-success">直購</span>`
       : `<span class="badge bg-danger">競標</span>`;
 
-  // 4. 動態在畫面上產生一張 Bootstrap 卡片
-  const cardElement = document.createElement("div");
-  cardElement.className = "card m-2 shadow-sm col";
+  const isSold = productData.status === "sold";
+  const statusBadge = isSold ? `<span class="badge bg-dark ms-1">已售出</span>` : "";
+
+  // 產生分類標籤 Badges（顯示除了「推薦」以外的標籤，讓畫面更清晰）
+  const displayTags = tags.filter((tag) => tag !== "推薦");
+  const tagsBadgesHTML = displayTags
+    .map(
+      (tag) =>
+        `<span class="badge bg-secondary-subtle text-secondary-emphasis me-1">${tag}</span>`,
+    )
+    .join("");
+
+  // 動態在畫面上產生一張 Bootstrap 卡片按鈕（保留原 Tag 結構並附帶標籤屬性）
+  const cardElement = document.createElement("button");
+  cardElement.type = "button";
+  cardElement.className = `card m-2 shadow-sm col text-start p-0 border ${isSold ? "bg-light opacity-75" : "bg-white"}`;
   cardElement.style.width = "18rem";
+  cardElement.style.cursor = "pointer";
+  cardElement.dataset.tags = tags.join(",");
   cardElement.innerHTML = `
         ${
           productData.image
-            ? `<img src="${productData.image}" class="card-img-top" style="height: 180px; object-fit:
-  cover;" alt="商品照片">`
-            : ""
+            ? `<img src="${productData.image}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="商品照片">`
+            : `<div class="card-img-top bg-light d-flex align-items-center justify-content-center text-muted" style="height: 180px;">無商品照片</div>`
         }
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5 class="card-title mb-0">${productData.name}</h5>
-            ${typeBadge}
+            <h5 class="card-title mb-0 text-dark">${productData.name}</h5>
+            <div>${typeBadge}${statusBadge}</div>
           </div>
+          <div class="mb-2">${tagsBadgesHTML}</div>
           <p class="card-text text-muted small">${productData.desc || "無詳細介紹"}</p>
-          <p class="card-text fw-bold mb-1">${priceInfo}</p>
-          <small class="text-secondary">運送方式：${productData.shipping}</small>
+          <p class="card-text fw-bold mb-1 text-dark">${priceInfo}</p>
+          <small class="text-secondary">運送方式：${(Array.isArray(productData.shipping) ? productData.shipping : [productData.shipping]).join("、")}</small>
         </div>
       `;
 
-  // 5. 加入到主畫面的商品卡容器內
+  // 點擊卡片跳轉至商品詳細頁 cardInfo.html
+  cardElement.addEventListener("click", () => {
+    sessionStorage.setItem("ntou_selected_product", JSON.stringify(productData));
+    const query = productData.id ? `?id=${encodeURIComponent(productData.id)}` : "";
+    window.location.assign(`./cardInfo.html${query}`);
+  });
+
+  // 加入到主畫面的商品卡容器內
   cardsArea.appendChild(cardElement);
 }
 
+// 根據當下所選標籤讀取畫面
+function renderCardsByCategory() {
+  const categoryName = sessionStorage.getItem(CURRENT_CATEGORY);
+
+  // 1. 更新右側上方的大標題
+  const titleEl = document.getElementById("category-title");
+  if (titleEl) {
+    titleEl.textContent = categoryName;
+  }
+
+  // 2. 取得並清空商品卡區域
+  const cardsArea = document.getElementById("cards-lists-area");
+  if (!cardsArea) return;
+  cardsArea.innerHTML = "";
+
+  // 3. 讀取最新商品列表並依所選分類標籤篩選
+  cards = loadStoredCards();
+  const filteredCards = cards.filter((card) => {
+    const tags = normalizeCardTags(card);
+    return tags.includes(categoryName) && card.status !== "delisted";
+  });
+
+  if (filteredCards.length === 0) {
+    const emptyMsg = document.createElement("p");
+    emptyMsg.className = "text-muted mt-3";
+    emptyMsg.textContent = `目前「${categoryName}」尚無商品。`;
+    cardsArea.appendChild(emptyMsg);
+    return;
+  }
+
+  filteredCards.forEach((productData) => renderCardToDOM(productData));
+}
+
+// 根據所選標籤更改畫面
+function bindSidebarLinks() {
+  const sidebarLinks = document.querySelectorAll(".sidebar .nav-link");
+  sidebarLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const selectedCategory = link.textContent.trim();
+      if (!selectedCategory) return;
+
+      // 更新左側導覽列選中狀態樣式
+      sidebarLinks.forEach((l) => l.classList.remove("fw-bold", "text-primary"));
+      link.classList.add("fw-bold", "text-primary");
+
+      // 根據所選欄位切換大標題與商品卡片
+      sessionStorage.setItem(CURRENT_CATEGORY, selectedCategory);
+      renderCardsByCategory();
+    });
+  });
+}
+
+// 新增卡片（考慮如果商品數量多的情況，可能不需要直接篩過直接再呼叫renderCardToDOM）
+function addCards(productData) {
+  // 確保每個新增的商品都有唯一 id 與至少一個標籤
+  const tags = normalizeCardTags(productData);
+  const id = productData.id || `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const normalizedProduct = { ...productData, id, tags };
+
+  // 1. 將表單送來的物件推入陣列並同步至 sessionStorage，連後端後會改
+  cards = loadStoredCards();
+  cards.push(normalizedProduct);
+  saveStoredCards(cards);
+
+  // 2. 若當前頁面有 #cards-lists-area 且符合目前分類則立即渲染
+  if (tags.includes(CURRENT_CATEGORY)) {
+    renderCardToDOM(normalizedProduct);
+  }
+}
+
+// 初始化
+function initCardsList() {
+  if(sessionStorage.getItem(CURRENT_CATEGORY) === null){
+    sessionStorage.setItem(CURRENT_CATEGORY, "推薦");
+  }
+  bindSidebarLinks();
+  renderCardsByCategory();
+}
+
+// 使時間易閱讀
 function formatDateTime(rawTime) {
   if (!rawTime) return "";
   return rawTime.replace(/-/g, "/").replace("T", "-");
 }
+
+window.addEventListener("DOMContentLoaded", initCardsList);
 
 export { addCards };

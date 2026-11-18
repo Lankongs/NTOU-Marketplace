@@ -1,29 +1,49 @@
 import { addCards } from "../mainArea/cardsList.js";
-let mainArea;
-let formArea = null; // 動態建立，未開啟時不佔用 DOM
 
+// 初始化
 function init() {
-  mainArea = document.getElementById("main-area");
-  let addButton = document.getElementById("list-products-button");
-  addButton.addEventListener("click", showProductForm);
+  // 若當前頁面存在 #product-form-area（即位於 addProducts.html），初始化表單邏輯
+  const formArea = document.getElementById("product-form-area");
+  if (formArea) {
+    initProductForm(formArea);
+  }
 }
 
-// 點擊「刊登商品」：動態生成並掛載表單到 DOM
-function showProductForm() {
-  mainArea.style.display = "none";
+// 將圖片檔案讀取為 Data URL（讓跨頁面跳轉回 index.html 後仍可預覽圖片）
+// 可能要考慮一下儲存圖片的方式需獨立解決，裡面應該會有一個 PUT / POST 請求
+function readFileAsDataURL(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result || "");
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+}
 
-  // 動態建立表單容器
-  formArea = document.createElement("div");
-  formArea.id = "product-form-area";
-  formArea.innerHTML = getFormBaseHTML();
-  // 插入到 DOM 樹中
-  mainArea.parentNode.insertBefore(formArea, mainArea.nextSibling);
+// 取得本地當前時間字串（格式為 YYYY-MM-DDTHH:mm），用於設定 datetime-local 的 min 屬性
+function getCurrentLocalDateTimeString() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const h = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+// 初始化 addProducts.html 上的表單互動與送出事件
+// addCards會使用 PUT / POST 請求
+function initProductForm(formArea) {
   // 預設渲染「直購模式」的欄位（此時競標欄位完全不在 DOM 中）
   renderDynamicFields("direct");
+
   // 綁定「返回主頁」事件
-  formArea
-    .querySelector("#cancel-button")
-    .addEventListener("click", hideProductForm);
+  const cancelButton = formArea.querySelector("#cancel-button");
+  if (cancelButton) {
+    cancelButton.addEventListener("click", () => {
+      window.location.assign("./index.html");
+    });
+  }
 
   // 綁定「直購 / 競標」切換事件
   const typeRadios = formArea.querySelectorAll('input[name="listingType"]');
@@ -33,30 +53,65 @@ function showProductForm() {
     );
   });
 
-  //////////////// 暫時將商品內容傳回前端，後端完成會改
+  // 當勾選任一標籤時，隱藏未選標籤的錯誤提示
+  const tagCheckboxes = formArea.querySelectorAll('input[name="prodTags"]');
+  const tagsError = formArea.querySelector("#tags-error");
+  tagCheckboxes.forEach((cb) => {
+    cb.addEventListener("change", () => {
+      if (tagsError) tagsError.hidden = true;
+    });
+  });
+
+  // 暫時將商品內容存入前端並導回 index.html，後端完成會改
   const form = formArea.querySelector("#product-listing-form");
-  form.addEventListener("submit", function (event) {
-    event.preventDefault(); // 阻止頁面跳轉
+  if (!form) return;
+
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault(); // 阻止頁面預設跳轉
+
+    // 0. 檢查並收集商品標籤（確保每張商品卡皆有一個以上的標籤）
+    const checkedTags = Array.from(
+      formArea.querySelectorAll('input[name="prodTags"]:checked'),
+    ).map((cb) => cb.value);
+
+    if (checkedTags.length === 0) {
+      if (tagsError) tagsError.hidden = false;
+      return;
+    }
+
+    // 自動附上「推薦」與「我的商品」標籤，合併使用者勾選的分類標籤（去重）
+    const allTags = Array.from(new Set(["推薦", "我的商品", ...checkedTags]));
 
     // 1. 判斷當前模式（直購 / 競標）
     const selectedType = formArea.querySelector(
       'input[name="listingType"]:checked',
     ).value;
 
-    // 2. 處理圖片（若有上傳圖片，產生前端可直接預覽的 Blob URL）
+    // 2. 處理圖片（若有上傳圖片，轉為 Data URL 以支援跨頁面顯示）
     const imageInput = document.getElementById("prod-image");
     let imageUrl = "";
-    if (imageInput.files && imageInput.files[0]) {
-      imageUrl = URL.createObjectURL(imageInput.files[0]);
+    if (imageInput && imageInput.files && imageInput.files[0]) {
+      imageUrl = await readFileAsDataURL(imageInput.files[0]);
     }
 
-    // 3. 收集共用欄位
+    // 3. 收集共用欄位（包含多標籤陣列 tags 與多選運送方式 shipping）
+    const selectedShippings = Array.from(
+      document.querySelectorAll(".prod-shipping-cb:checked")
+    ).map((cb) => cb.value);
+
+    if (selectedShippings.length === 0) {
+      alert("請至少選擇一種運送方式！");
+      return;
+    }
+
     let productData = {
       type: selectedType, // "direct" 或 "auction"
       name: document.getElementById("prod-name").value,
       desc: document.getElementById("prod-desc").value,
-      shipping: document.getElementById("prod-shipping").value,
+      shipping: selectedShippings,
       image: imageUrl,
+      tags: allTags,
+      status: "selling", // selling: 販售中, delisted: 已下架, sold: 已售出
     };
 
     // 4. 根據模式收集專屬欄位
@@ -67,37 +122,55 @@ function showProductForm() {
         document.getElementById("direct-quantity").value,
       );
     } else if (selectedType === "auction") {
-      // 【競標模式】
-      productData.startPrice = Number(
+      // 【競標模式】起標價統一設置為 currentPrice，並保留 startPrice 供向下相容
+      // 1. 檢查結標時間不可定在當前時間之前
+      const endTimeInput = document.getElementById("auction-end-time");
+      const endTimeValue = endTimeInput ? endTimeInput.value : "";
+      const endTimeMs = new Date(endTimeValue).getTime();
+
+      if (!endTimeValue || isNaN(endTimeMs) || endTimeMs <= Date.now()) {
+        alert("結標時間不可定在當前時間之前！請重新設定結標時間。");
+        if (endTimeInput) endTimeInput.focus();
+        return;
+      }
+
+      // 2. 檢查壓哨出價限制時間不可大於或等於總競標時間（避免一上架即進入限制出價階段而無人可出價）
+      const restrictedMinutes = Number(
+        document.getElementById("auction-restricted-minutes").value || 0,
+      );
+      const totalDurationMinutes = (endTimeMs - Date.now()) / (1000 * 60);
+
+      if (restrictedMinutes > 0 && totalDurationMinutes <= restrictedMinutes) {
+        const roundedDuration = Math.max(1, Math.floor(totalDurationMinutes));
+        alert(
+          `設定不可行！壓哨出價限制時間（${restrictedMinutes} 分鐘）不可大於或等於總競標時長（約 ${roundedDuration} 分鐘）。\n此設定將導致商品一上架即因無人有出價紀錄而完全無法出價！請縮短壓哨限制時間或延長結標時間。`,
+        );
+        document.getElementById("auction-restricted-minutes").focus();
+        return;
+      }
+
+      const startPrice = Number(
         document.getElementById("auction-start-price").value,
       );
+      productData.currentPrice = startPrice;
+      productData.startPrice = startPrice;
       productData.bidIncrement = Number(
         document.getElementById("auction-bid-increment").value,
       );
-      productData.endTime = document.getElementById("auction-end-time").value;
-      productData.restrictedMinutes = Number(
-        document.getElementById("auction-restricted-minutes").value || 0,
-      );
+      productData.endTime = endTimeValue;
+      productData.restrictedMinutes = restrictedMinutes;
+      productData.bids = [];
     }
 
-    // 5. 將物件傳給 cardsList.js 的 addCards 函數，後端完成會改成從後端重拉
+    // 5. 將物件傳給 cardsList.js 的 addCards 函數儲存
     addCards(productData);
 
-    // 6. 返回主畫面
-    hideProductForm();
+    // 6. 成功新增商品後，跳轉回 index.html 主畫面
+    window.location.assign("./index.html");
   });
 }
 
-// 點擊「返回主頁」：從 DOM 樹徹底移除表單
-function hideProductForm() {
-  if (formArea) {
-    formArea.remove(); // 徹底從 DOM 銷毀
-    formArea = null;
-  }
-  mainArea.style.display = "flex";
-}
-
-// 根據選擇動態替換欄位
+// 根據選擇動態替換欄位（保留原有 Tag 結構不變）
 function renderDynamicFields(type) {
   const container = document.getElementById("dynamic-fields");
   if (!container) return;
@@ -133,7 +206,7 @@ function renderDynamicFields(type) {
           </div>
           <div class="mb-3">
             <label for="auction-end-time" class="form-label">結標時間 <span class="text-danger">*</span></label>
-            <input type="datetime-local" class="form-control" id="auction-end-time" required>
+            <input type="datetime-local" class="form-control" id="auction-end-time" min="${getCurrentLocalDateTimeString()}" required>
           </div>
           <div class="mb-3">
                 <label for="auction-restricted-minutes" class="form-label">
@@ -142,75 +215,11 @@ function renderDynamicFields(type) {
                 <input type="number" class="form-control" id="auction-restricted-minutes" placeholder="如：5" min="0"
   value="0">
                 <div class="form-text text-muted">
-                  結標前最後幾分鐘僅限「已有出價紀錄者」可繼續出價（輸入 0 表示不限制）。
+                  結標前最後幾分鐘僅限「已有出價紀錄者」可繼續出價（輸入 0 表示不限制，且不可大於或等於總競標時間）。
                 </div>
+          </div>
         `;
   }
-}
-
-// 表單基礎骨架（共用欄位）
-function getFormBaseHTML() {
-  return `
-        <div class="container mt-4 mb-5" style="max-width: 650px;">
-          <div class="card shadow-sm">
-            <div class="card-body p-4">
-              <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="card-title mb-0">刊登商品</h3>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-button">
-                  ← 返回主頁
-                </button>
-              </div>
-
-              <!-- 模式切換按鈕（預設直購） -->
-              <div class="mb-4 text-center">
-                <div class="btn-group w-100" role="group">
-                  <input type="radio" class="btn-check" name="listingType" id="type-direct" value="direct" checked>
-                  <label class="btn btn-outline-primary" for="type-direct">直購模式</label>
-
-                  <input type="radio" class="btn-check" name="listingType" id="type-auction" value="auction">
-                  <label class="btn btn-outline-primary" for="type-auction">競標模式</label>
-                </div>
-              </div>
-
-              <form id="product-listing-form">
-                <!-- 【共用欄位】名稱、照片、介紹 -->
-                <div class="mb-3">
-                  <label for="prod-name" class="form-label">商品名稱 <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="prod-name" placeholder="請輸入商品名稱" required>
-                </div>
-
-                <div class="mb-3">
-                  <label for="prod-image" class="form-label">商品照片</label>
-                  <input type="file" class="form-control" id="prod-image" accept="image/*">
-                </div>
-
-                <div class="mb-3">
-                  <label for="prod-desc" class="form-label">商品介紹</label>
-                  <textarea class="form-control" id="prod-desc" rows="3" placeholder="請填寫詳細介紹"></textarea>
-                </div>
-
-                <!-- 【動態插槽】：只有被選中的模式欄位才會渲染進來 -->
-                <div id="dynamic-fields"></div>
-
-                <!-- 【共用欄位】運送方式 -->
-                <div class="mb-4">
-                  <label for="prod-shipping" class="form-label">運送方式 <span class="text-danger">*</span></label>
-    		  <select class="form-select" id="prod-shipping" required>
-                    <option value="" disabled selected>請選擇運送方式</option>
-                    <option value="校內面交">校內面交</option>
-                    <option value="超商取貨 (7-11 / 全家)">超商取貨 (7-11 / 全家)</option>
-                    <option value="郵寄包裹">郵寄包裹</option>
-    		  </select>
-                </div>
-
-                <div class="d-flex justify-content-end gap-2">
-                  <button type="submit" class="btn btn-primary px-4">確認刊登</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      `;
 }
 
 window.addEventListener("load", init);
