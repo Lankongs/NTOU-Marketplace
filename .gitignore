@@ -5,3 +5,4 @@ __pycache__/
 !.env.example
 members.csv
 members.jsonl
+node_modules/
