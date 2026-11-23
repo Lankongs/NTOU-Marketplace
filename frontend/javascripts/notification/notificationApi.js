@@ -3,6 +3,7 @@ const NOTIFICATION_PATH = '/api/notifications';
 // 使用同來源 Session，204 不解析回應本文
 async function request(path, options = {}) {
   const response = await fetch(path, { ...options, credentials: 'same-origin', cache: 'no-store' });
+  // 已讀 API 成功時沒有本文，直接解析 JSON 會誤判為失敗
   if (response.status === 204) return null;
 
   let result = null;
@@ -40,6 +41,7 @@ async function patch(path) {
         headers: { [csrf.headerName]: csrf.token }
       });
     } catch (error) {
+      // Token 可能已失效，只針對 403 更新後重試，避免無限請求
       if (error.status !== 403 || attempt === 1) throw error;
     }
   }

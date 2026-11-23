@@ -11,6 +11,7 @@ export function syncNotificationMenu(notifications) {
 // 共用導覽列與靜態導覽列都使用現有的通知按鈕
 export function initNotificationMenu() {
   const button = document.getElementById('notify-button');
+  // 同一按鈕不重複綁定；導覽列重建時先清理舊選單
   if (currentMenu?.button === button) return;
   currentMenu?.destroy();
   currentMenu = null;
@@ -80,6 +81,7 @@ export function initNotificationMenu() {
   }
 
   function render(notifications) {
+    // 未讀可能在第六筆以後，紅點不能只檢查選單顯示的五筆
     const unread = notifications.some(notification => notification.readAt == null);
     badge.hidden = !unread;
     button.setAttribute('aria-label', unread ? '通知，有未讀通知' : '通知，沒有未讀通知');
@@ -117,11 +119,13 @@ export function initNotificationMenu() {
   }
 
   async function refresh() {
+    // 載入未完成時共用同一請求，避免連續開關選單重複查詢
     if (pending) return pending;
     badge.hidden = true;
     button.setAttribute('aria-label', '通知');
     showMessage('通知載入中…');
     body.setAttribute('aria-busy', 'true');
+    // 記住請求版本，頁面同步已讀後便不採用較舊的回應
     const requestRevision = revision;
     pending = (async () => {
       try {
@@ -191,6 +195,7 @@ export function initNotificationMenu() {
     },
     destroy() {
       disposed = true;
+      // 一次解除本選單的事件，避免舊按鈕與全域監聽器殘留
       events.abort();
       panel.remove();
       badge.remove();

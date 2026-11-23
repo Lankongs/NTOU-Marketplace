@@ -18,6 +18,7 @@ function initNotificationPage() {
   let busy = false;
   let noticeTimer = null;
   let pageVisible = true;
+  // 以通知 ID 保存節點，標記已讀時只更新對應項目
   const notificationNodes = new Map();
 
   function updateButtons() {
@@ -152,6 +153,7 @@ function initNotificationPage() {
       nodes.item.querySelector('button')?.remove();
     }
     updateSummary();
+    // 共用更新後的資料，讓列表統計與鈴鐺紅點保持一致
     syncNotificationMenu(notifications);
   }
 
@@ -164,10 +166,12 @@ function initNotificationPage() {
     try {
       if (all) await markAllNotificationsRead();
       else await markNotificationRead(id);
+      // 確認伺服器成功後才改畫面，失敗時不必還原已讀狀態
       updateReadState(id, all);
       status.hidden = true;
       if (all) showNotice('已將全部通知標記為已讀', false, true);
     } catch (error) {
+      // 操作失敗保留原本內容，登入過期時另外停用已讀操作
       if (error.status === 401) {
         available = false;
         showStatus('登入已過期，請重新登入', { needsLogin: true });
@@ -192,6 +196,7 @@ function initNotificationPage() {
   readAll.addEventListener('click', () => changeReadState(null, true));
   retry.addEventListener('click', reload);
   window.addEventListener('pagehide', () => {
+    // 離開時清除提示與計時器，避免尚未完成的請求再次顯示提示
     showNotice('');
     pageVisible = false;
   });
