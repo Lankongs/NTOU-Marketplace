@@ -20,6 +20,9 @@
     <script type="module" src="./javascripts/topArea/initTop.js"></script>
     <script type="module" src="./javascripts/auth/member.js"></script>
     <script type="module" src="./javascripts/mainArea/selfPage.js"></script>
+    <script type="module" src="./javascripts/mainArea/purchaseOrders.js"></script>
+    <script type="module" src="./javascripts/mainArea/salesOrders.js"></script>
+    <link rel="stylesheet" href="./purchaseOrders.css" />
   </head>
   <body class="bg-light">
     <!--頂層欄位（由 initTop.js 動態渲染）-->
@@ -67,6 +70,13 @@
               <a
                 href="#"
                 class="list-group-item list-group-item-action border-0 nav-link rounded-2 mx-2 mb-1"
+                data-filter="已售出"
+              >
+                <i class="bi bi-bag-check me-2 text-info"></i>已售出
+              </a>
+              <a
+                href="#"
+                class="list-group-item list-group-item-action border-0 nav-link rounded-2 mx-2 mb-1"
                 data-filter="直購商品"
               >
                 <i class="bi bi-tag me-2 text-primary"></i>直購商品
@@ -78,12 +88,33 @@
               >
                 <i class="bi bi-hammer me-2 text-danger"></i>競標商品
               </a>
+              <hr class="mx-3 my-2" />
+              <!-- 買家訂單：右側三個橫向頁籤，原商品篩選邏輯不變 -->
+              <button type="button" id="self-purchase-link"
+                class="list-group-item list-group-item-action border-0 rounded-2 mx-2 mb-1 text-start"
+                style="width: calc(100% - 1rem);">
+                <i class="bi bi-bag-check me-2"></i>我的購買訂單
+              </button>
+              <!-- 銷售訂單不共用商品 data-filter -->
+              <button type="button" id="self-sales-link"
+                class="list-group-item list-group-item-action border-0 rounded-2 mx-2 mb-1 text-start"
+                style="width: calc(100% - 1rem);">
+                <i class="bi bi-box-seam me-2"></i>我的銷售訂單
+              </button>
+              <hr class="mx-3 my-2" />
+              <!-- 運費設定：不使用 data-filter，避免影響原商品篩選 -->
+              <button type="button" id="self-shipping-link"
+                class="list-group-item list-group-item-action border-0 rounded-2 mx-2 mb-1 text-start"
+                style="width: calc(100% - 1rem);">
+                <i class="bi bi-truck me-2"></i>運費設定
+              </button>
             </div>
           </nav>
         </div>
 
         <!-- 右側主要內容區：商品卡片展示與操作 -->
         <div class="col-12 col-md-9 col-lg-10">
+          <section id="self-products-section">
           <div class="card shadow-sm border-0 bg-white p-4">
             <!-- 頂部標題與快速操作 -->
             <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom flex-wrap gap-2">
@@ -109,6 +140,98 @@
               class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-3"
             ></div>
           </div>
+          </section>
+
+          <!-- 新增：我的購買訂單。此階段僅以前端測試資料示範。 -->
+          <section id="self-purchase-section" hidden aria-labelledby="purchase-title">
+            <div class="card shadow-sm border-0 bg-white p-4">
+              <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+                <h3 id="purchase-title" class="fw-bold mb-0">我的購買訂單</h3>
+              </div>
+              <!-- 橫向選單：不使用商品篩選的 data-filter -->
+              <div id="purchase-order-tabs" class="purchase-order-tabs" role="group" aria-label="購買訂單分類">
+                <button type="button" class="purchase-tab active" data-order-status="processing" aria-pressed="true">貨物處理中</button>
+                <button type="button" class="purchase-tab" data-order-status="completed" aria-pressed="false">已完成</button>
+                <button type="button" class="purchase-tab" data-order-status="cancelled" aria-pressed="false">不成立</button>
+              </div>
+              <div id="purchase-order-list" class="mt-3" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <!-- 我的銷售訂單：測試資料，買賣雙方尚未同步 -->
+          <section id="self-sales-section" hidden aria-labelledby="sales-title">
+            <div class="card shadow-sm border-0 bg-white p-4">
+              <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+                <h3 id="sales-title" class="fw-bold mb-0">我的銷售訂單</h3>
+              </div>
+              <div id="sales-order-tabs" class="purchase-order-tabs" role="group" aria-label="銷售訂單分類">
+                <button type="button" class="purchase-tab active" data-sales-status="processing" aria-pressed="true">貨物處理中</button>
+                <button type="button" class="purchase-tab" data-sales-status="completed" aria-pressed="false">已完成</button>
+                <button type="button" class="purchase-tab" data-sales-status="cancelled" aria-pressed="false">不成立</button>
+              </div>
+              <div id="sales-order-notice" class="alert mt-3" role="status" hidden></div>
+              <div id="sales-order-list" class="mt-3" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <!-- 新增：賣家統一運費設定（目前僅存於本瀏覽器 sessionStorage） -->
+          <section id="self-shipping-section" hidden>
+            <div class="card shadow-sm border-0 bg-white p-4">
+              <h3 class="fw-bold mb-2">運費設定</h3>
+              <p class="text-muted mb-4">同一位賣家、同一次結帳只收取一次運費。此為前端測試設定，正式版再與會員帳號及後端連接。</p>
+              <div id="shipping-settings-notice" class="alert alert-info" role="status" hidden></div>
+              <form id="shipping-settings-form">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">校內面交</label>
+                    <input class="form-control" type="text" value="NT$0（固定免運費）" disabled />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold" for="shipping-fee-seven">7-ELEVEN 運費（元）</label>
+                    <input id="shipping-fee-seven" class="form-control" type="number" min="0" step="1" placeholder="例如：60" required />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold" for="shipping-fee-family">全家運費（元）</label>
+                    <input id="shipping-fee-family" class="form-control" type="number" min="0" step="1" placeholder="例如：60" required />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold" for="shipping-fee-post">郵寄運費（元）</label>
+                    <input id="shipping-fee-post" class="form-control" type="number" min="0" step="1" placeholder="例如：80" required />
+                  </div>
+                </div>
+                <div class="mt-4 d-flex gap-2 align-items-center flex-wrap">
+                  <button class="btn btn-primary" type="submit">儲存運費設定</button>
+                  <span class="text-muted small">未設定的配送方式不能在正式系統被當作 0 元。</span>
+                </div>
+              </form>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- 銷售訂單操作確認 Modal：只操作前端示範資料 -->
+    <div class="modal fade" id="salesActionModal" tabindex="-1" aria-labelledby="salesActionModalTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="salesActionModalTitle">確認操作</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+          </div>
+          <form id="sales-action-form">
+            <div class="modal-body">
+              <p id="sales-action-description" class="mb-3"></p>
+              <div id="sales-action-reason-wrapper" hidden>
+                <label for="sales-action-reason" class="form-label">取消原因（必填）</label>
+                <textarea id="sales-action-reason" class="form-control" rows="3" maxlength="300" placeholder="請輸入原因"></textarea>
+              </div>
+              <p class="text-muted small mb-0 mt-3">這是前端操作示意，不會更新真實訂單或他人帳號。</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">返回</button>
+              <button type="submit" class="btn btn-primary" id="sales-action-confirm">確認</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -189,14 +312,23 @@
               </div>
 
               <div class="mb-3">
-                <label for="edit-prod-shipping" class="form-label fw-semibold">
-                  運送方式 <span class="text-danger">*</span>
+                <label class="form-label fw-semibold">
+                  運送方式 <span class="text-danger">*（可複選）</span>
                 </label>
-                <select class="form-select" id="edit-prod-shipping" required>
-                  <option value="校內面交">校內面交</option>
-                  <option value="超商取貨 (7-11 / 全家)">超商取貨 (7-11 / 全家)</option>
-                  <option value="郵寄包裹">郵寄包裹</option>
-                </select>
+                <div class="d-flex flex-wrap gap-3 mt-1" id="edit-prod-shipping-group">
+                  <div class="form-check">
+                    <input class="form-check-input edit-prod-shipping-cb" type="checkbox" value="校內面交" id="edit-ship-meet">
+                    <label class="form-check-label" for="edit-ship-meet">校內面交</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input edit-prod-shipping-cb" type="checkbox" value="超商取貨 (7-11 / 全家)" id="edit-ship-store">
+                    <label class="form-check-label" for="edit-ship-store">超商取貨 (7-11 / 全家)</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input edit-prod-shipping-cb" type="checkbox" value="郵寄包裹" id="edit-ship-post">
+                    <label class="form-check-label" for="edit-ship-post">郵寄包裹</label>
+                  </div>
+                </div>
               </div>
 
               <div class="mb-3">

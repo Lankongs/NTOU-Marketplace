@@ -1,6 +1,7 @@
 const STORAGE_KEY = "ntou_marketplace_cards";
 const CURRENT_CATEGORY = "last_page";
 
+// 用於相容舊資料，可考慮不使用
 function normalizeCardTags(card) {
   if (Array.isArray(card.tags) && card.tags.length > 0) {
     return card.tags;
@@ -9,6 +10,10 @@ function normalizeCardTags(card) {
   return [];
 }
 
+// 讀取商品，裡面應該會有一個 GET 請求取得商品陣列
+// AI 是建議限定某些範圍內去呼叫，比如一次呼叫20個、選了某些標籤再呼叫一次、選一個商品再呼叫……etc
+// 上面方法是為了不讓壓力給到本地篩選，以免暫存區容量爆炸，下面的function都可以考量這些情況
+// （變成這整個js都只呼叫 GET ）
 function loadStoredCards() {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -26,6 +31,7 @@ function loadStoredCards() {
   }
 }
 
+// 更新商品
 function saveStoredCards(cards) {
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
@@ -36,6 +42,7 @@ function saveStoredCards(cards) {
 
 let cards = loadStoredCards();
 
+// 商品卡片製作
 function renderCardToDOM(productData) {
   const cardsArea = document.getElementById("cards-lists-area");
   if (!cardsArea) return;
@@ -43,15 +50,19 @@ function renderCardToDOM(productData) {
   const tags = normalizeCardTags(productData);
 
   // 判斷要顯示直購價格還是競標資訊
+  const currentAuctionPrice = productData.currentPrice ?? productData.startPrice ?? 0;
   const priceInfo =
     productData.type === "direct"
       ? `價格：NT$ ${productData.price} | 庫存：${productData.quantity}`
-      : `起標價：NT$ ${productData.startPrice} | 結標時間：${formatDateTime(productData.endTime)}`;
+      : `目前出價：NT$ ${currentAuctionPrice} | 結標時間：${formatDateTime(productData.endTime)}`;
 
   const typeBadge =
     productData.type === "direct"
       ? `<span class="badge bg-success">直購</span>`
       : `<span class="badge bg-danger">競標</span>`;
+
+  const isSold = productData.status === "sold";
+  const statusBadge = isSold ? `<span class="badge bg-dark ms-1">已售出</span>` : "";
 
   // 產生分類標籤 Badges（顯示除了「推薦」以外的標籤，讓畫面更清晰）
   const displayTags = tags.filter((tag) => tag !== "推薦");
@@ -65,7 +76,7 @@ function renderCardToDOM(productData) {
   // 動態在畫面上產生一張 Bootstrap 卡片按鈕（保留原 Tag 結構並附帶標籤屬性）
   const cardElement = document.createElement("button");
   cardElement.type = "button";
-  cardElement.className = "card m-2 shadow-sm col text-start p-0 border bg-white";
+  cardElement.className = `card m-2 shadow-sm col text-start p-0 border ${isSold ? "bg-light opacity-75" : "bg-white"}`;
   cardElement.style.width = "18rem";
   cardElement.style.cursor = "pointer";
   cardElement.dataset.tags = tags.join(",");
@@ -78,12 +89,12 @@ function renderCardToDOM(productData) {
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h5 class="card-title mb-0 text-dark">${productData.name}</h5>
-            ${typeBadge}
+            <div>${typeBadge}${statusBadge}</div>
           </div>
           <div class="mb-2">${tagsBadgesHTML}</div>
           <p class="card-text text-muted small">${productData.desc || "無詳細介紹"}</p>
           <p class="card-text fw-bold mb-1 text-dark">${priceInfo}</p>
-          <small class="text-secondary">運送方式：${productData.shipping}</small>
+          <small class="text-secondary">運送方式：${(Array.isArray(productData.shipping) ? productData.shipping : [productData.shipping]).join("、")}</small>
         </div>
       `;
 
@@ -98,6 +109,7 @@ function renderCardToDOM(productData) {
   cardsArea.appendChild(cardElement);
 }
 
+// 根據當下所選標籤讀取畫面
 function renderCardsByCategory() {
   const categoryName = sessionStorage.getItem(CURRENT_CATEGORY);
 
@@ -130,6 +142,7 @@ function renderCardsByCategory() {
   filteredCards.forEach((productData) => renderCardToDOM(productData));
 }
 
+// 根據所選標籤更改畫面
 function bindSidebarLinks() {
   const sidebarLinks = document.querySelectorAll(".sidebar .nav-link");
   sidebarLinks.forEach((link) => {
@@ -149,6 +162,7 @@ function bindSidebarLinks() {
   });
 }
 
+// 新增卡片（考慮如果商品數量多的情況，可能不需要直接篩過直接再呼叫renderCardToDOM）
 function addCards(productData) {
   // 確保每個新增的商品都有唯一 id 與至少一個標籤
   const tags = normalizeCardTags(productData);
@@ -166,6 +180,7 @@ function addCards(productData) {
   }
 }
 
+// 初始化
 function initCardsList() {
   if(sessionStorage.getItem(CURRENT_CATEGORY) === null){
     sessionStorage.setItem(CURRENT_CATEGORY, "推薦");
@@ -174,6 +189,7 @@ function initCardsList() {
   renderCardsByCategory();
 }
 
+// 使時間易閱讀
 function formatDateTime(rawTime) {
   if (!rawTime) return "";
   return rawTime.replace(/-/g, "/").replace("T", "-");

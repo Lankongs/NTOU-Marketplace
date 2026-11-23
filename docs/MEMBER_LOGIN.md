@@ -89,6 +89,17 @@ cd backend
 
 共用的 `post()` 函式已負責每次 POST 前取得 token。前端不需使用 localStorage 儲存密碼或登入憑證。
 
+### 5. 註冊
+
+從登入頁按「註冊會員」，填寫帳號、顯示名稱、海大信箱與密碼。完成後回登入頁，用新帳號登入。
+
+`POST /api/auth/register` 需要 CSRF token，JSON 欄位為 `account`、`displayName`、`password`、`email`。
+後端檢查信箱格式及網域，網域須為 `mail.ntou.edu.tw`（忽略大小寫），並將信箱存入會員資料。
+帳號允許 3 至 100 個英文字母、數字、底線、句點或連字號，忽略頭尾空白與大小寫。
+顯示名稱必填且最多 100 字元，密碼至少 8 字元且最多 72 個 UTF-8 位元組。
+成功回傳 201，資料不合法回傳 400，已登入或帳號／海大信箱重複時回傳 409，嘗試過於頻繁回傳 429。
+信箱比對忽略大小寫。
+
 ### 錯誤格式
 
 ```json
@@ -107,10 +118,10 @@ Postman 也需要先呼叫 csrf API，保留 Cookie，再使用 token 標頭送�
 - 密碼以 BCrypt（cost 12）儲存，不存明文；會員查詢使用字串相等條件，不解析使用者提供的查詢 JSON。
 - 登入狀態保存在伺服器 HttpSession，閒置 60 分鐘到期；重啟後失效。
 - 身分取自 Spring Security，不相信前端提供的會員 ID。
-- `/api/**` 預設要求登入，只有 `/api/auth/csrf`、`/api/auth/login` 公開；未來新增公開 API 要明確加入白名單。
+- `/api/**` 預設要求登入，訪客可取得 CSRF token、登入及註冊。
 - Cookie 設定 HttpOnly、SameSite=Lax；保留 Spring Security 預設 CSRF 保護。
 - 本機僅監聽 127.0.0.1；正式部署須配置 HTTPS、Secure Cookie、正式資料庫與 Session 儲存策略。
-- 這次未實作註冊、重設密碼、海大身分驗證或交易權限；商品後端僅提供登入後的 `GET /api/products`。
+- 重設密碼、海大身分驗證與交易權限仍待實作；商品後端提供登入後的 `GET /api/products`。
 - 既有商品表單仍是前端展示；未來交易 API 需檢查登入會員與商品擁有者。
 
 ## 測試與打包

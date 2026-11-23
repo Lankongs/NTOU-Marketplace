@@ -1,3 +1,6 @@
+import { api, post } from '../auth/api.js';
+
+const CURRENT_CATEGORY = "last_page";
 const NAV_HTML = `
   <nav
     class="navbar navbar-expand-lg py-2"
@@ -130,15 +133,55 @@ function renderTopNav() {
 }
 
 function bindNavEvents() {
-  // 頂層「主頁按鈕」：點擊回到 index.html
+  const logoutButton = document.getElementById("logout-button");
+
+  // 頂層「主頁按鈕」：點擊回到 index.html（公開）
   const homeButton = document.getElementById("to-home");
   if (homeButton) {
     homeButton.addEventListener("click", () => {
+      sessionStorage.setItem(CURRENT_CATEGORY, "推薦");
       window.location.assign("./index.html");
     });
   }
 
-  // 頂層「刊登商品按鈕」：點擊跳轉至 addProducts.html
+  // 搜尋表單：包含送出按鈕與 Enter 事件（公開）
+  const searchButton = document.getElementById("cart-search-button");
+  if (searchButton) {
+    searchButton.addEventListener("click", () => {
+      window.location.assign("./index.html");
+    });
+  }
+
+  const searchPlacehold = document.getElementById("cart-search");
+  if (searchPlacehold) {
+    searchPlacehold.addEventListener("keydown", (event) => {
+      if (event.key === 'Enter') {
+        window.location.assign("./index.html");
+      }
+    });
+  }
+
+  // 頂層「會員按鈕」：若已登入跳轉至 selfPage.html，非登入跳轉至 login.html
+  const userButton = document.getElementById("user-button");
+  if (userButton) {
+    userButton.addEventListener("click", () => {
+      window.location.assign("./selfPage.html");
+    });
+  }
+
+  // 頂層「登出按鈕」
+  if (logoutButton) {
+    logoutButton.addEventListener("click", async () => {
+      try {
+        await post('/api/auth/logout');
+        window.location.assign("./login.html");
+      } catch {
+        alert("登出失敗，請確認伺服器連線");
+      }
+    });
+  }
+
+  // 頂層「刊登商品按鈕」：若已登入跳轉至 addProducts.html，非登入跳轉至 login.html
   const addButton = document.getElementById("list-products-button");
   if (addButton) {
     addButton.addEventListener("click", () => {
@@ -146,29 +189,60 @@ function bindNavEvents() {
     });
   }
 
-  // 頂層「會員按鈕」：若已登入（登出按鈕可見），點擊跳轉至 selfPage.html
-  const userButton = document.getElementById("user-button");
-  const logoutButton = document.getElementById("logout-button");
-  if (userButton) {
-    userButton.addEventListener("click", () => {
-      if (logoutButton && !logoutButton.hidden) {
-        window.location.assign("./selfPage.html");
-      }
-    });
-  }
-
-  // 頂層「購物車按鈕」：點擊跳轉至 cart.html
+  // 頂層「購物車按鈕」：若已登入跳轉至 cart.html，非登入跳轉至 login.html
   const cartButton = document.getElementById("shopping-cart-button");
   if (cartButton) {
     cartButton.addEventListener("click", () => {
       window.location.assign("./cart.html");
     });
   }
+
+  // 頂層「聊天」、「設定」、「通知」按鈕：非登入時跳轉至 login.html
+  const chatButton = document.getElementById("chat-button");
+  if (chatButton) {
+    chatButton.addEventListener("click", () => {
+    });
+  }
+
+  const settingButton = document.getElementById("setting-button");
+  if (settingButton) {
+    settingButton.addEventListener("click", () => {
+    });
+  }
+
+  const notifyButton = document.getElementById("notify-button");
+  if (notifyButton) {
+    notifyButton.addEventListener("click", () => {
+    });
+  }
+}
+
+async function checkAuth() {
+  const path = window.location.pathname;
+  // 檢查是否為公開頁面（index、cardInfo 或網站首頁根目錄）
+  const isPublicPage =
+    path.endsWith("/index.html") ||
+    path.endsWith("/cardInfo.html") ||
+    path === "/" ||
+    path.endsWith("/frontend/");
+
+  if (isPublicPage) return;
+
+  // 支援示範模式（若帶有 ?demo=1 或 ?demo=multi 則放行）
+  const demoParam = new URLSearchParams(window.location.search).get("demo");
+  if (demoParam === "1" || demoParam === "multi") return;
+
+  try {
+    await api("/api/auth/me");
+  } catch {
+    window.location.assign("./login.html");
+  }
 }
 
 function init() {
   renderTopNav();
   bindNavEvents();
+  checkAuth();
 }
 
 // 模組載入時立即執行渲染與綁定（由於 module script 具備 defer 特性，此時 DOM 已可存取）

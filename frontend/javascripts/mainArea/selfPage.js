@@ -12,6 +12,7 @@ function readFileAsDataURL(file) {
   });
 }
 
+// 讀取商品
 function loadStoredCards() {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -21,7 +22,7 @@ function loadStoredCards() {
     return parsed.map((card, idx) => ({
       ...card,
       id: card.id || `prod_${idx}_${Date.now()}`,
-      status: card.status || "active", // active: 販售中, delisted: 已下架
+      status: card.status === "delisted" ? "delisted" : (card.status === "sold" ? "sold" : "selling"), // selling: 販售中, delisted: 已下架, sold: 已售出
       tags: Array.isArray(card.tags) && card.tags.length > 0 ? card.tags : ["推薦", "我的商品"],
     }));
   } catch (e) {
@@ -30,6 +31,7 @@ function loadStoredCards() {
   }
 }
 
+// 更新商品
 function saveStoredCards(cards) {
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
@@ -38,11 +40,14 @@ function saveStoredCards(cards) {
   }
 }
 
+// 使時間易閱讀
 function formatDateTime(rawTime) {
   if (!rawTime) return "未指定";
   return rawTime.replace(/-/g, "/").replace("T", " ");
 }
 
+// 目前是從商品陣列中篩出自己的商品，但之後應該會接api
+// 裡面應該會有一個 GET 請求取得商品陣列，篩選or直接get問題見cardList.js的loadStoredCards註解
 function getMyProducts(cards) {
   // 篩選屬於我的商品（tags 含「我的商品」或是使用者發布的商品，若無標籤預設全部為可管理商品）
   const myCards = cards.filter((card) => {
@@ -52,6 +57,7 @@ function getMyProducts(cards) {
   return myCards.length > 0 ? myCards : cards;
 }
 
+// 畫面處理
 function renderSelfCards() {
   const cardsArea = document.getElementById("self-cards-area");
   const emptyState = document.getElementById("self-empty-state");
@@ -67,8 +73,9 @@ function renderSelfCards() {
   // 依照側邊欄分類篩選
   const filtered = myProducts.filter((product) => {
     if (currentFilter === "全部商品") return true;
-    if (currentFilter === "販售中") return product.status !== "delisted";
+    if (currentFilter === "販售中") return product.status === "selling" || product.status === "active";
     if (currentFilter === "已下架") return product.status === "delisted";
+    if (currentFilter === "已售出") return product.status === "sold";
     if (currentFilter === "直購商品") return product.type === "direct";
     if (currentFilter === "競標商品") return product.type === "auction";
     return true;
@@ -85,6 +92,7 @@ function renderSelfCards() {
 
   filtered.forEach((product) => {
     const isDelisted = product.status === "delisted";
+    const isSold = product.status === "sold";
 
     const col = document.createElement("div");
     col.className = "col";
@@ -94,17 +102,20 @@ function renderSelfCards() {
         ? `<span class="badge bg-success">直購</span>`
         : `<span class="badge bg-danger">競標</span>`;
 
-    const statusBadge = isDelisted
-      ? `<span class="badge bg-secondary">已下架</span>`
-      : `<span class="badge bg-primary">販售中</span>`;
+    let statusBadge = `<span class="badge bg-primary">販售中</span>`;
+    if (isDelisted) {
+      statusBadge = `<span class="badge bg-secondary">已下架</span>`;
+    } else if (isSold) {
+      statusBadge = `<span class="badge bg-dark">已售出</span>`;
+    }
 
     const priceText =
       product.type === "direct"
         ? `價格：NT$ ${product.price ?? 0} ｜ 庫存：${product.quantity ?? 1}`
-        : `起標價：NT$ ${product.startPrice ?? 0} ｜ 結標時間：${formatDateTime(product.endTime)}`;
+        : `起標/目前出價：NT$ ${product.currentPrice ?? product.startPrice ?? 0} ｜ 結標時間：${formatDateTime(product.endTime)}`;
 
     col.innerHTML = `
-      <div class="card h-100 shadow-sm border ${isDelisted ? "opacity-75 bg-light" : "bg-white"}">
+      <div class="card h-100 shadow-sm border ${isDelisted || isSold ? "opacity-75 bg-light" : "bg-white"}">
         <div class="position-relative">
           ${
             product.image
@@ -120,14 +131,14 @@ function renderSelfCards() {
           <h5 class="card-title text-truncate mb-2 text-dark" title="${product.name}">${product.name}</h5>
           <p class="card-text text-muted small text-truncate mb-2">${product.desc || "無描述"}</p>
           <p class="card-text fw-bold text-dark mb-1 small">${priceText}</p>
-          <p class="card-text text-secondary small mb-3">運送方式：${product.shipping || "校內面交"}</p>
+          <p class="card-text text-secondary small mb-3">運送方式：${(Array.isArray(product.shipping) ? product.shipping : [product.shipping]).join("、")}</p>
 
           <div class="mt-auto pt-2 border-top d-flex gap-2 justify-content-between">
-            <button type="button" class="btn btn-outline-primary btn-sm flex-fill btn-edit" data-id="${product.id}">
+            <button type="button" class="btn btn-outline-primary btn-sm flex-fill btn-edit" data-id="${product.id}" ${isSold ? 'disabled title="已售出商品無法編輯"' : ""}>
               <i class="bi bi-pencil-square me-1"></i>編輯
             </button>
-            <button type="button" class="btn ${isDelisted ? "btn-outline-success" : "btn-outline-warning"} btn-sm flex-fill btn-toggle-status" data-id="${product.id}" data-delisted="${isDelisted}">
-              <i class="bi ${isDelisted ? "bi-arrow-up-circle" : "bi-arrow-down-circle"} me-1"></i>${isDelisted ? "重新上架" : "下架"}
+            <button type="button" class="btn ${isDelisted ? "btn-outline-success" : isSold ? "btn-outline-secondary" : "btn-outline-warning"} btn-sm flex-fill btn-toggle-status" data-id="${product.id}" data-delisted="${isDelisted}" ${isSold ? 'disabled title="已售出商品無法切換上下架"' : ""}>
+              <i class="bi ${isDelisted ? "bi-arrow-up-circle" : isSold ? "bi-check-circle" : "bi-arrow-down-circle"} me-1"></i>${isDelisted ? "重新上架" : isSold ? "已售出" : "下架"}
             </button>
             <button type="button" class="btn btn-outline-danger btn-sm btn-delete" data-id="${product.id}" title="刪除商品">
               <i class="bi bi-trash"></i>
@@ -153,23 +164,28 @@ function renderSelfCards() {
   });
 }
 
-// 調整上下架
+// 調整上下架，裡面應該會有一個 PUT / POST / PATCH 請求
 function toggleProductStatus(productId) {
   const cards = loadStoredCards();
   const target = cards.find((c) => String(c.id) === String(productId));
   if (!target) return;
+
+  if (target.status === "sold") {
+    alert("此商品已售出，無法切換上下架狀態！");
+    return;
+  }
 
   const willDelist = target.status !== "delisted";
   const actionText = willDelist ? "下架" : "重新上架";
 
   if (!confirm(`確定要將「${target.name}」${actionText}嗎？`)) return;
 
-  target.status = willDelist ? "delisted" : "active";
+  target.status = willDelist ? "delisted" : "selling";
   saveStoredCards(cards);
   renderSelfCards();
 }
 
-// 刪除畫面
+// 刪除畫面，裡面應該會有一個 DELETE 請求
 function deleteProduct(productId) {
   const cards = loadStoredCards();
   const target = cards.find((c) => String(c.id) === String(productId));
@@ -188,6 +204,11 @@ function openEditModal(productId) {
   const product = cards.find((c) => String(c.id) === String(productId));
   if (!product) return;
 
+  if (product.status === "sold") {
+    alert("已售出商品無法編輯！");
+    return;
+  }
+
   currentEditingId = product.id;
 
   const idInput = document.getElementById("edit-prod-id");
@@ -196,13 +217,18 @@ function openEditModal(productId) {
   const priceLabel = document.getElementById("edit-prod-price-label");
   const qtyInput = document.getElementById("edit-prod-quantity");
   const qtyContainer = document.getElementById("edit-prod-quantity-container");
-  const shippingSelect = document.getElementById("edit-prod-shipping");
   const descInput = document.getElementById("edit-prod-desc");
 
   if (idInput) idInput.value = product.id;
   if (nameInput) nameInput.value = product.name || "";
   if (descInput) descInput.value = product.desc || "";
-  if (shippingSelect) shippingSelect.value = product.shipping || "校內面交";
+
+  const currentShippings = Array.isArray(product.shipping)
+    ? product.shipping
+    : [product.shipping];
+  document.querySelectorAll(".edit-prod-shipping-cb").forEach((cb) => {
+    cb.checked = currentShippings.includes(cb.value);
+  });
 
   if (product.type === "direct") {
     if (priceLabel) priceLabel.textContent = "直購價格 (NT$)";
@@ -210,8 +236,8 @@ function openEditModal(productId) {
     if (qtyContainer) qtyContainer.hidden = false;
     if (qtyInput) qtyInput.value = product.quantity ?? 1;
   } else {
-    if (priceLabel) priceLabel.textContent = "起標價格 (NT$)";
-    if (priceInput) priceInput.value = product.startPrice ?? 0;
+    if (priceLabel) priceLabel.textContent = "起標/目前價格 (NT$)";
+    if (priceInput) priceInput.value = product.currentPrice ?? product.startPrice ?? 0;
     if (qtyContainer) qtyContainer.hidden = true;
   }
 
@@ -222,7 +248,7 @@ function openEditModal(productId) {
   }
 }
 
-// 點擊編輯更新商品卡
+// 點擊編輯更新商品卡，裡面應該會有一個 PUT / POST 請求
 function bindEditForm() {
   const form = document.getElementById("edit-product-form");
   if (!form) return;
@@ -239,8 +265,15 @@ function bindEditForm() {
     let imageInput = document.getElementById("edit-prod-image");
     const priceInput = document.getElementById("edit-prod-price");
     const qtyInput = document.getElementById("edit-prod-quantity");
-    const shippingSelect = document.getElementById("edit-prod-shipping");
     const descInput = document.getElementById("edit-prod-desc");
+
+    const selectedShippings = Array.from(
+      document.querySelectorAll(".edit-prod-shipping-cb:checked")
+    ).map((cb) => cb.value);
+    if (selectedShippings.length === 0) {
+      alert("請至少選擇一種運送方式！");
+      return;
+    }
 
     product.name = nameInput.value.trim();
     let imageUrl = "";
@@ -248,14 +281,16 @@ function bindEditForm() {
       imageUrl = await readFileAsDataURL(imageInput.files[0]);
       if(imageUrl !== "") product.image = imageUrl;
     }
-    product.shipping = shippingSelect.value;
+    product.shipping = selectedShippings;
     product.desc = descInput.value.trim();
 
     if (product.type === "direct") {
       product.price = Number(priceInput.value) || 0;
       product.quantity = Math.max(1, Number(qtyInput.value) || 1);
     } else {
-      product.startPrice = Number(priceInput.value) || 0;
+      const updatedPrice = Number(priceInput.value) || 0;
+      product.currentPrice = updatedPrice;
+      product.startPrice = updatedPrice;
     }
 
     saveStoredCards(cards);
@@ -283,15 +318,125 @@ function bindSidebar() {
       links.forEach((l) => l.classList.remove("active", "fw-bold", "bg-primary", "text-white"));
       link.classList.add("active", "fw-bold", "bg-primary", "text-white");
 
+      showSelfProducts();
       renderSelfCards();
     });
   });
 }
 
+// 前端測試：沒有會員 ID 前，運費暫存於目前瀏覽器分頁的 sessionStorage。
+const SHIPPING_FEE_STORAGE_KEY = "ntou_marketplace_seller_shipping_fees_preview_v1";
+
+function showSelfProducts() {
+  document.getElementById("self-products-section").hidden = false;
+  document.getElementById("self-shipping-section").hidden = true;
+  document.getElementById("self-purchase-section").hidden = true;
+  document.getElementById("self-sales-section").hidden = true;
+  document.getElementById("self-sales-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+  document.getElementById("self-purchase-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+  document.getElementById("self-shipping-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+}
+
+function showShippingSettings() {
+  document.getElementById("self-products-section").hidden = true;
+  document.getElementById("self-shipping-section").hidden = false;
+  document.getElementById("self-purchase-section").hidden = true;
+  document.getElementById("self-sales-section").hidden = true;
+  document.getElementById("self-sales-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+  document.getElementById("self-purchase-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+  document.querySelectorAll(".self-sidebar [data-filter]").forEach((link) =>
+    link.classList.remove("active", "fw-bold", "bg-primary", "text-white")
+  );
+  document.getElementById("self-shipping-link").classList.add("active", "fw-bold", "bg-primary", "text-white");
+}
+
+// 訂單只切換顯示區塊；原商品的分類、編輯、上下架照常運作。
+function bindPurchaseNavigation() {
+  document.getElementById("self-purchase-link").addEventListener("click", () => {
+    document.getElementById("self-products-section").hidden = true;
+    document.getElementById("self-shipping-section").hidden = true;
+    document.getElementById("self-purchase-section").hidden = false;
+    document.getElementById("self-sales-section").hidden = true;
+    document.querySelectorAll(".self-sidebar [data-filter]").forEach((link) =>
+      link.classList.remove("active", "fw-bold", "bg-primary", "text-white")
+    );
+    document.getElementById("self-shipping-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+    document.getElementById("self-sales-link").classList.remove("active", "fw-bold", "bg-primary", "text-white");
+    document.getElementById("self-purchase-link").classList.add("active", "fw-bold", "bg-primary", "text-white");
+  });
+}
+
+function bindShippingSettings() {
+  const form = document.getElementById("shipping-settings-form");
+  const notice = document.getElementById("shipping-settings-notice");
+  document.getElementById("self-shipping-link").addEventListener("click", showShippingSettings);
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(SHIPPING_FEE_STORAGE_KEY) || "null");
+    if (saved && typeof saved === "object") {
+      for (const name of ["seven", "family", "post"]) {
+        const fee = saved[name];
+        if (Number.isInteger(fee) && fee >= 0) document.getElementById(`shipping-fee-${name}`).value = String(fee);
+      }
+    }
+  } catch (error) {
+    console.warn("無法讀取測試運費設定", error);
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const fees = {};
+    for (const name of ["seven", "family", "post"]) {
+      const input = document.getElementById(`shipping-fee-${name}`);
+      const amount = Number(input.value);
+      if (!input.value.trim() || !Number.isSafeInteger(amount) || amount < 0) {
+        notice.className = "alert alert-danger";
+        notice.textContent = "運費必須是 0 以上的整數。";
+        notice.hidden = false;
+        input.focus();
+        return;
+      }
+      fees[name] = amount;
+    }
+    try {
+      sessionStorage.setItem(SHIPPING_FEE_STORAGE_KEY, JSON.stringify({meet: 0, ...fees}));
+      notice.className = "alert alert-success";
+      notice.textContent = "已儲存前端測試運費。請回購物車重新勾選商品並進入結帳，才會帶入最新金額。";
+    } catch {
+      notice.className = "alert alert-danger";
+      notice.textContent = "儲存失敗，請檢查瀏覽器是否允許 sessionStorage。";
+    }
+    notice.hidden = false;
+  });
+}
+
+function bindSalesNavigation() {
+  document.getElementById("self-sales-link").addEventListener("click", () => {
+    document.getElementById("self-products-section").hidden = true;
+    document.getElementById("self-shipping-section").hidden = true;
+    document.getElementById("self-purchase-section").hidden = true;
+    document.getElementById("self-sales-section").hidden = false;
+    document.querySelectorAll(".self-sidebar [data-filter]").forEach((link) =>
+      link.classList.remove("active", "fw-bold", "bg-primary", "text-white")
+    );
+    for (const id of ["self-purchase-link", "self-shipping-link"]) {
+      document.getElementById(id).classList.remove("active", "fw-bold", "bg-primary", "text-white");
+    }
+    document.getElementById("self-sales-link").classList.add("active", "fw-bold", "bg-primary", "text-white");
+  });
+}
+
+// 初始化
 function initSelfPage() {
   bindSidebar();
   bindEditForm();
+  bindShippingSettings();
+  bindPurchaseNavigation();
+  bindSalesNavigation();
   renderSelfCards();
+  // 下單後自動開啟「我的購買訂單」，不影響原本側邊欄點擊行為。
+  const requestedView = new URLSearchParams(window.location.search).get('view');
+  if (requestedView === 'purchase') document.getElementById('self-purchase-link').click();
+  else if (requestedView === 'sales') document.getElementById('self-sales-link').click();
 }
 
 window.addEventListener("DOMContentLoaded", initSelfPage);

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>會員註冊｜海大校園交易</title>
+  <link rel="stylesheet" href="/auth.css">
+  <script type="module" src="/javascripts/auth/register.js"></script>
+</head>
+<body>
+  <header><a class="brand" href="/">海大<span>校園交易</span></a></header>
+  <main class="login-layout">
+    <section class="intro">
+      <h1>海大拍賣系統</h1>
+      <p>校園二手商品交易平台</p>
+    </section>
+    <section class="login-card" aria-labelledby="registerTitle">
+      <h2 id="registerTitle">註冊會員</h2>
+      <form id="registerForm" method="post">
+        <label for="account">帳號</label>
+        <input id="account" name="account" autocomplete="username" autocapitalize="none"
+               spellcheck="false" maxlength="100" aria-describedby="accountHint" required>
+        <p class="fine" id="accountHint">請輸入至少 3 個字元。可使用英文字母、數字，以及 _、.、-。</p>
+        <label for="displayName">顯示名稱</label>
+        <input id="displayName" name="displayName" autocomplete="nickname" maxlength="100" required>
+        <label for="email">海大信箱</label>
+        <input id="email" name="email" type="email" autocomplete="email" autocapitalize="none"
+               spellcheck="false" maxlength="254" aria-describedby="emailHint" required>
+        <p class="fine" id="emailHint">請填寫以 @mail.ntou.edu.tw 結尾的信箱。</p>
+        <label for="password">密碼</label>
+        <input id="password" name="password" type="password" autocomplete="new-password"
+               minlength="8" maxlength="72" aria-describedby="passwordHint" required>
+        <p class="fine" id="passwordHint">請輸入至少 8 個字元。</p>
+        <label for="confirmPassword">確認密碼</label>
+        <input id="confirmPassword" type="password" autocomplete="new-password" maxlength="72" required>
+        <p id="error" class="error" role="alert" hidden></p>
+        <button id="submit" class="primary" type="submit">註冊</button>
+      </form>
+      <p class="fine">已有帳號？ <a class="text-button" href="/login.html">返回登入</a></p>
+    </section>
+  </main>
+</body>
+</html>

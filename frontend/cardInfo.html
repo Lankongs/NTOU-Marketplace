@@ -75,7 +75,7 @@
                 <span class="fw-semibold">購買數量</span>
                 <div class="input-group" style="max-width: 170px;">
                   <button class="btn btn-outline-success px-3 fw-bold" type="button" id="btn-qty-minus" disabled>-</button>
-                  <input type="text" class="form-control text-center border-success fw-bold" id="input-qty" value="1" readonly />
+                  <input type="number" class="form-control text-center border-success fw-bold" id="input-qty" value="1" min="1" />
                   <button class="btn btn-outline-success px-3 fw-bold" type="button" id="btn-qty-plus">+</button>
                 </div>
               </div>
@@ -123,10 +123,12 @@
             </div>
 
             <!-- 運送方式區塊（美化卡片樣式） -->
-            <div class="mt-4 p-3 bg-light rounded-3 d-flex align-items-center gap-2 text-secondary border">
+            <div class="mt-4 p-3 bg-light rounded-3 d-flex align-items-center gap-2 text-secondary border flex-wrap">
               <i class="bi bi-truck fs-5 text-dark"></i>
               <span class="fw-semibold text-dark">運送方式：</span>
-              <span id="detail-shipping" class="badge bg-white text-dark border px-2 py-1 fs-6">校內面交</span>
+              <div id="detail-shipping" class="d-flex flex-wrap gap-1 align-items-center">
+                <span class="badge bg-white text-dark border px-2 py-1 fs-6">校內面交</span>
+              </div>
             </div>
           </div>
 
