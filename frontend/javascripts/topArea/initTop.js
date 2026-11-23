@@ -1,4 +1,5 @@
 import { api, post } from '../auth/api.js';
+import { initNotificationMenu } from '../notification/notificationMenu.js';
 
 const CURRENT_CATEGORY = "last_page";
 const NAV_HTML = `
@@ -219,6 +220,8 @@ function bindNavEvents() {
 
 async function checkAuth() {
   const path = window.location.pathname;
+  // 通知頁自行顯示未登入與連線失敗提示
+  if (path.endsWith("/notifications.html")) return;
   // 檢查是否為公開頁面（index、cardInfo 或網站首頁根目錄）
   const isPublicPage =
     path.endsWith("/index.html") ||
@@ -242,6 +245,7 @@ async function checkAuth() {
 function init() {
   renderTopNav();
   bindNavEvents();
+  initNotificationMenu();
   checkAuth();
 }
 
