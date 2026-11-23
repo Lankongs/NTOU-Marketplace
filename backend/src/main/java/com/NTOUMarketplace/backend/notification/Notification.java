@@ -4,7 +4,7 @@ import java.time.Instant;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-/** 通知資料；會員關聯使用既有的數字 ID。 */
+// 通知資料，收件人使用會員 ID
 @Document(collection = "notifications")
 public class Notification {
     @Id
@@ -21,7 +21,7 @@ public class Notification {
     public Notification() {
     }
 
-    /** 僅由後端服務建立通知，建立時間不由前端提供。 */
+    // 由後端建立通知並設定建立時間
     public Notification(Long recipientId, String type, String title, String content,
             Instant createdAt, String targetType, String targetId) {
         this.recipientId = recipientId;

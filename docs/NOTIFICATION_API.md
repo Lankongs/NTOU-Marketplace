@@ -1,32 +1,40 @@
 # NTOU Marketplace — 通知中心 API 規格
 
-> 適用於目前 `notification` 模組的後端 MVP。內容以 Java 原始碼與通知測試為準；建立通知的內部服務已完成，但尚未串接競標、訂單、聊天事件或通知前端。
+> 適用於目前 `notification` 模組。已提供通知查詢、已讀更新及內部建立服務；尚未串接競標、訂單、聊天事件或通知前端。
 
 ## 1. API 概覽
 
-- **方法與路徑**：`GET /api/notifications`
-- **用途**：查詢目前登入會員收到的通知。
+- **API**：`GET /api/notifications`、`PATCH /api/notifications/{id}/read`、`PATCH /api/notifications/read-all`。
+- **用途**：查詢自己的通知、標記單筆或全部已讀。
 - **認證**：需要有效的登入 Session，沿用既有 Spring Security 與 HttpSession。
-- **回傳格式**：JSON 通知陣列；沒有通知時回傳 HTTP 200 與 `[]`。
-- **存取控制**：後端使用 `Authentication.getName()` 取得帳號，再透過 `MemberRepository.find(account)` 取得會員 ID；不接受前端自行指定查詢身分。
-- **排序**：`createdAt` 降冪，再依 `id` 降冪；MongoDB 的 ID 欄位是 `_id`。
-- **目前範圍**：只提供列表 GET API，不提供公開建立通知、修改已讀或未讀數量 API。
+- **回傳格式**：GET 回傳 JSON 通知陣列，沒有通知時為 HTTP 200 與 `[]`；PATCH 成功回傳 204，無本文。
+- **存取控制**：後端依登入身分取得會員 ID，只能查詢及更新自己的通知。
+- **排序**：`createdAt` 降冪，再依 `id` 降冪。
+- **目前範圍**：不提供公開建立通知或未讀數量 API；建立通知由其他後端模組呼叫 Service。
 
 ## 2. 請求方式與登入要求
 
-目前沒有支援的 Query Parameters，也沒有分頁、通知類型或未讀篩選參數。
+三支 API 都需要登入，不接受收件人 Query Parameter；列表尚無分頁、通知類型或未讀篩選。
 
-即使請求附加 `recipientId`，Controller 也不會用它決定收件人；查詢仍以登入會員 ID 為準。查詢條件直接送進 Repository，不會先讀取全部通知再由前端過濾。
+即使請求附加 `recipientId`，也不會改變查詢或更新對象。
 
 ```http
 GET /api/notifications
+PATCH /api/notifications/EXAMPLE_NOTIFICATION_ID/read
+PATCH /api/notifications/read-all
 ```
 
-前後端同源時，由瀏覽器維持登入 Session；此 GET 請求不需要 CSRF 驗證資料。不要自行把驗證憑證寫入前端或文件。
+| API | 請求內容 | 成功回應 |
+| --- | --- | --- |
+| `GET /api/notifications` | 無 Body，不需 CSRF | 200，通知陣列 |
+| `PATCH /api/notifications/{id}/read` | `id` 為通知 ID；無 Body，需 CSRF | 204，無本文 |
+| `PATCH /api/notifications/read-all` | 無 Body，需 CSRF | 204，無本文 |
+
+前後端同源時由瀏覽器維持登入 Session。PATCH 前先呼叫 `GET /api/auth/csrf`，將回傳的 `headerName` 與 `token` 作為標頭名稱與值；範例見第 6 節。不要在程式或文件中寫入真實驗證憑證。
 
 ## 3. 回應格式與錯誤處理
 
-成功：HTTP 200，回傳 `NotificationView` 陣列，不直接暴露 MongoDB Document 或 `recipientId`。
+GET 成功回傳 HTTP 200 與通知陣列，不包含 `recipientId`。PATCH 成功為 HTTP 204，沒有回應本文。
 
 以下僅為格式示意，不表示系統已自動產生競標或訂單通知：
 
@@ -48,46 +56,54 @@ GET /api/notifications
 | 回應欄位 | 型別與說明 |
 | --- | --- |
 | `id` | 字串，通知識別值；不是 JSON 欄位 `_id`。 |
-| `type` | 字串，目前沒有 enum 或固定白名單。 |
+| `type` | 字串，標準值見第 5 節；舊類型如 `DEMO` 仍可讀取。 |
 | `title`、`content` | 通知標題及內容。 |
-| `createdAt` | `Instant` 序列化的時間，範例使用 UTC。 |
-| `readAt` | 時間或 `null`；新通知預設為 `null`。目前沒有更新此欄位的 API。 |
-| `targetType`、`targetId` | 字串或 `null`，僅儲存關聯目標；不會自動查詢目標或產生跳轉網址。 |
+| `createdAt` | 建立時間字串，範例使用 UTC。 |
+| `readAt` | `null` 代表未讀，非 null 代表已讀；PATCH 使用伺服器時間，重複操作保留原時間。 |
+| `targetType`、`targetId` | 字串或 `null`，供前端決定通知點擊後的跳轉目標；目前沒有固定 URL 規格。 |
 
 | HTTP 狀態碼 | 情況 |
 | --- | --- |
 | 200 | 查詢成功；無通知時為 `[]`。 |
-| 401 | 未登入，由既有 SecurityFilterChain 拒絕，例如 `{"message":"請先登入。"}`。 |
-| 401 | Session 身分仍存在，但已查不到對應會員；Controller 明確拋出 `ResponseStatusException`，避免非預期 500。此路徑的錯誤本文由框架處理，不保證與 SecurityFilterChain 的 JSON 相同。 |
+| 204 | 單筆或全部已讀成功；重複操作、沒有未讀通知時也成功。 |
+| 401 | 未登入、Session 失效或會員已不存在。未登入時例如 `{"message":"請先登入。"}`；其他路徑不保證使用相同錯誤本文。 |
+| 403 | PATCH 缺少或帶入無效的 CSRF 驗證資料；即使未登入也可能先收到 403。 |
+| 404 | 單筆通知不存在或不屬於登入會員；兩者統一回應，避免洩漏他人資料。 |
 | 5xx | 資料庫不可用等伺服器錯誤；通知模組尚未定義專用錯誤本文、重試或降級機制。 |
+
+重複標記已讀不會覆蓋第一次 `readAt`；全部已讀只更新自己的未讀通知，空列表也回傳 204。前端應依 HTTP 狀態碼處理錯誤。
 
 ## 4. MongoDB 資料模型
 
-`Notification.java` 使用一般 class、private 欄位、無參數建構子及 getters，並設定 `@Document(collection = "notifications")`。沒有使用 `@Field` 改名。
+Collection 名稱為 `notifications`，主要欄位如下：
 
-| Collection 欄位 | Java 型別 | BSON 型別／規則 |
-| --- | --- | --- |
-| `_id` | `@Id String id` | Spring Data 對可轉換的 ID 使用 ObjectId；讀回 Java 為字串。一般由新增流程產生 ID，手動建資料建議使用 BSON ObjectId。 |
-| `recipientId` | `Long` | Int64；對應會員的真實數字 ID。Service 要求大於零。 |
-| `type` | `String` | String；Service 要求非 null、非空白。 |
-| `title` | `String` | String；Service 要求非 null、非空白。 |
-| `content` | `String` | String；Service 要求非 null、非空白。 |
-| `createdAt` | `Instant` | Date；由 Service 呼叫 `Instant.now()` 設定，不依賴 Mongo Auditing。 |
-| `readAt` | `Instant` | Date 或 null；保留未來已讀功能。 |
-| `targetType` | `String` | String 或 null。 |
-| `targetId` | `String` | String 或 null；與數字會員 ID 分開處理。 |
+| 欄位 | 儲存型別與用途 |
+| --- | --- |
+| `_id` | 通知識別值，通常為 ObjectId；API 以字串 `id` 回傳。 |
+| `recipientId` | Int64（Java `Long`），收件會員的真實 ID，不回傳前端。 |
+| `type` | String，通知類型。 |
+| `title`、`content` | String，標題及內容。 |
+| `createdAt` | Date（Java `Instant`），由後端設定建立時間。 |
+| `readAt` | Date 或 null；null 代表未讀，非 null 代表已讀。 |
+| `targetType`、`targetId` | String 或 null，關聯目標類型及 ID。 |
 
-這些是 Java 映射與 Service 驗證規則，不是已建立的 MongoDB collection validator。直接透過 Compass 插入會繞過 Service 驗證與時間產生邏輯。
-
-Repository 繼承 `MongoRepository<Notification, String>`，使用：
-
-```java
-List<Notification> findByRecipientIdOrderByCreatedAtDescIdDesc(Long recipientId);
-```
-
-目前沒有自訂複合索引建立邏輯，也沒有分頁或筆數上限；Atlas 既有索引未確認。
+直接透過 Compass 建立資料會繞過 Service 驗證；正常建立通知應呼叫下節的內部服務。
 
 ## 5. 內部通知建立服務（供直購、訂單、競標等模組使用）
+
+### 通知類型
+
+| `NotificationType` | 用途／收件人 | 便利方法產生的標題 |
+| --- | --- | --- |
+| `ORDER_PLACED` | 下單成功，通知賣家 | 收到新訂單 |
+| `BID_PLACED` | 出價成功，通知賣家 | 商品有新出價 |
+| `AUCTION_WON` | 確認得標，通知買家 | 恭喜得標 |
+| `AUCTION_ENDED` | 競標結束，通知賣家，不預設有人得標 | 商品競標已結束 |
+| `SYSTEM` | 一般系統通知，由呼叫端指定收件人與文字 | 使用共用建立方法自訂 |
+
+新程式使用 `NotificationType`；共用方法與資料欄位仍保留 String，舊類型如 `DEMO` 仍可讀取。
+
+### 共用建立方法
 
 實際方法簽章位於 `NotificationService.java`：
 
@@ -102,7 +118,7 @@ public Notification createNotification(
 )
 ```
 
-`NotificationService.createNotification()` 為共用通知建立方法，並不限於競標功能。其他後端模組可於業務事件成功完成後呼叫，例如直購訂單建立、訂單狀態更新、競標結束等。通知模組負責儲存與查詢通知，事件發生時機、收件人及內容由各業務模組決定。目前尚未自動串接上述事件。
+其他後端 Service 可透過建構子注入 `NotificationService`。呼叫時機與收件人由業務模組決定，目前尚未自動串接業務事件。
 
 | 項目 | 規則 |
 | --- | --- |
@@ -113,49 +129,54 @@ public Notification createNotification(
 | 時間 | 伺服器設定 `createdAt`，新通知 `readAt` 為 null。 |
 | 驗證失敗 | 拋出 `IllegalArgumentException`，不呼叫 Repository 寫入。 |
 
-目前未限制文字長度、通知類型或驗證目標存在性；沒有公開 POST 建立通知 API。
-
-未來競標 Service 可使用建構子注入，於成功確認結標結果後呼叫。以下是**整合示意，尚未存在於競標模組**：
-
-```java
-private final NotificationService notificationService;
-
-public AuctionService(NotificationService notificationService) {
-    this.notificationService = notificationService;
-}
-
-// winnerId、productId 必須來自後端確認的結標結果。
-// 在成功確定得標結果後執行；此處不包含競標結算實作。
-public void notifyWinner(Long winnerId, String productId) {
-    notificationService.createNotification(
-        winnerId,
-        "AUCTION_WON",
-        "恭喜得標",
-        "你已得標此商品。",
-        "PRODUCT",
-        productId
-    );
-}
-```
-
-呼叫端需匯入 `com.NTOUMarketplace.backend.notification.NotificationService`。`AUCTION_WON`、`PRODUCT` 是範例約定，目前沒有 enum 強制或對應的自動跳轉功能。
-
-FR-M-07 的結標通知由競標模組負責觸發。競標模組須根據實際結標結果，分別決定賣家與得標買家的通知內容及收件人，並避免重複結標造成重複通知。通知模組負責儲存與查詢；無人出價、失敗重試與防重複仍待整合，此方法不會自動與競標結果組成交易，也不提供可靠投遞保證。
-
-直購訂單建立成功後，也可使用同一服務通知賣家。以下僅為**未來整合示意，尚未串接訂單事件**：
+目前未限制文字長度或強制 enum 白名單，也不驗證關聯目標是否存在；沒有公開 POST 建立通知 API。一般系統通知可呼叫：
 
 ```java
 notificationService.createNotification(
-    sellerId,
-    "ORDER_PLACED",
-    "收到新訂單",
-    "你的商品已有人下單，請查看訂單詳情。",
-    "ORDER",
-    orderId
+    recipientId, NotificationType.SYSTEM.name(), "系統公告", "公告內容", null, null
 );
 ```
 
-`sellerId` 必須是後端確認的賣家會員 ID（`Long`），`orderId` 必須是實際持久化訂單的 ID（傳入 `String`）。`ORDER_PLACED`、`ORDER` 同樣只是範例約定。此片段不建立訂單，也不表示目前已有可用的訂單持久化流程；必須待訂單模組完成並成功建立真實訂單後才能串接，不可捏造 ID。
+### 四種便利方法
+
+```java
+public Notification notifyOrderPlaced(Long sellerId, String productId, String productName)
+public Notification notifyBidPlaced(Long sellerId, String productId, String productName)
+public Notification notifyAuctionWon(Long winnerId, String productId, String productName)
+public Notification notifyAuctionEnded(Long sellerId, String productId, String productName)
+```
+
+| 參數 | 意義 |
+| --- | --- |
+| `sellerId`／`winnerId` | 後端確認的賣家／得標會員 ID，必須大於零。 |
+| `productId` | 實際商品 ID，非 null、非空白。 |
+| `productName` | 商品名稱，非 null、非空白；由方法填入通知內容。 |
+
+四個方法都回傳新增的 `Notification`，自動產生標題及含商品名稱的內容，設定 `targetType="PRODUCT"`、`targetId=productId`。目前不接受訂單 ID 或出價金額；下單通知也以商品為目標。前端須另與組員約定跳轉方式，後端不產生固定 URL。
+
+| 業務事件 | 呼叫方法 | 收件人 |
+| --- | --- | --- |
+| 直購訂單成功建立 | `notifyOrderPlaced(...)` | 賣家 |
+| 出價成功 | `notifyBidPlaced(...)` | 賣家 |
+| 結標並確認得標者 | `notifyAuctionWon(...)` | 得標買家 |
+| 競標結束（不預設有人得標） | `notifyAuctionEnded(...)` | 賣家 |
+
+上表是整合約定，**不代表這些事件已接上通知服務**；訂單與競標模組必須先確認業務結果，再決定是否呼叫。
+
+其他 Service 可透過建構子注入 `NotificationService`，於業務成功後呼叫。以下是**不同事件的獨立使用範例，不應一次全部呼叫**：
+
+```java
+// 直購下單成功，通知賣家
+notificationService.notifyOrderPlaced(sellerId, productId, productName);
+// 出價成功，通知賣家
+notificationService.notifyBidPlaced(sellerId, productId, productName);
+// 確認得標結果，通知買家
+notificationService.notifyAuctionWon(winnerId, productId, productName);
+// 結標完成，通知賣家
+notificationService.notifyAuctionEnded(sellerId, productId, productName);
+```
+
+**通知建立與業務交易尚無原子性保證，重試、補發與防重複機制也尚未實作。** 業務成功後若通知寫入失敗，目前不保證自動補發；再次呼叫可能新增重複通知，需由組員協調處理。
 
 ## 6. 前端串接範例
 
@@ -173,6 +194,30 @@ if (response.status === 401) {
 }
 ```
 
+單筆／全部已讀範例（使用者點選時擇一呼叫）：
+
+```javascript
+async function markRead(path) {
+  const csrfResponse = await fetch('/api/auth/csrf', { credentials: 'same-origin' });
+  if (!csrfResponse.ok) throw new Error(`CSRF 取得失敗：HTTP ${csrfResponse.status}`);
+  const csrf = await csrfResponse.json();
+  const response = await fetch(path, {
+    method: 'PATCH',
+    credentials: 'same-origin',
+    headers: { [csrf.headerName]: csrf.token }
+  });
+  if (!response.ok) throw new Error(`已讀更新失敗：HTTP ${response.status}`);
+  // 204 沒有本文，重新查詢列表即可取得 readAt。
+}
+
+// 單筆已讀，id 來自 GET 回應
+await markRead(`/api/notifications/${encodeURIComponent(id)}/read`);
+// 全部已讀
+await markRead('/api/notifications/read-all');
+```
+
+PATCH 遇到 401 應引導使用者重新登入；403 可重新取得 CSRF Token 後最多重試一次，若仍失敗則顯示錯誤訊息；單筆遇到 404 可重新整理列表。不要使用只支援 POST 的共用 `post()` 送 PATCH。
+
 此片段僅供組員整合參考，尚未接到現有通知鈴鐺。不要傳入會員 ID 決定查詢身分，也不要把資料庫設定或驗證憑證寫入 JavaScript。
 
 ## 7. 測試結果與已知限制
@@ -183,44 +228,34 @@ if (response.status === 401) {
 
 ```powershell
 Set-Location backend
-.\mvnw.cmd "-Dtest=NotificationHttpTests,NotificationServiceTests" test
+.\mvnw.cmd "-Dtest=NotificationHttpTests,NotificationServiceTests,NotificationReadRepositoryTests" test
 ```
 
 上述指定測試使用 Mock Repository、現有 SecurityFilterChain 與 Mock Session，不連線 MongoDB；其他整合測試不一定如此。
 
 | 測試類別 | 已測試內容 |
 | --- | --- |
-| `NotificationHttpTests`（4 項） | 未登入與會員不存在時 401、A／B 隔離及參數不可冒用、DTO 不含收件人、空列表。 |
-| `NotificationServiceTests`（3 項） | Mock 新增與查詢、時間及必要欄位驗證、收件人查詢與排序契約。 |
+| `NotificationHttpTests`（8 項） | GET、單筆與全部已讀的登入、CSRF、跨會員限制、404、空列表及重複操作。 |
+| `NotificationServiceTests`（6 項） | 四種便利方法、舊類型相容、欄位與時間驗證、查詢與已讀呼叫。 |
+| `NotificationReadRepositoryTests`（2 項） | 收件人限定更新、保留第一次已讀時間、全部已讀及舊資料缺少 readAt。 |
 
-既有本機 Surefire 報告：**7 項 Mock 測試通過，Failures 0、Errors 0、Skipped 0**。此次文件更新未重新執行測試。
+**16 項自動化測試通過，Failures 0、Errors 0、Skipped 0**。
 
 ### 實際整合驗證
 
-依開發者回報，已在 `ntou_marketplace_dev.notifications` **手動新增兩筆測試通知**，使用 Demo 帳號登入後：
+- GET、單筆已讀、全部已讀及 Atlas 持久化已實測成功；列表依建立時間降冪，回應不含 `recipientId`。
+- **2026-11-24 已手動執行 `NotificationAtlasManualTests`**：`Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`，`BUILD SUCCESS`。涵蓋四種便利方法、Atlas 寫入、重新讀取、欄位驗證及本次測試資料清理。
+- 手動 Atlas 測試預設停用，需明確啟用及確認資料庫才會執行；不屬於上述 16 項 Mock 測試。
 
-- `GET /api/notifications` 成功回傳兩筆通知。
-- 結果依 `createdAt` 降冪排序，回應不包含 `recipientId`。
-
-這證明該次 **Atlas → Repository → Service → Controller → JSON 的讀取路徑正常**。本次文件更新沒有連線或寫入資料庫。
-
-| 測試項目 | 狀態 |
-| --- | --- |
-| Atlas 手動新增通知 | 已驗證 |
-| Spring Boot API 讀取 Atlas 通知 | 已驗證 |
-| 通知依建立時間降冪排列 | 已驗證 |
-| `NotificationService` 寫入 Atlas | 尚未驗證 |
-| Spring Boot 重啟後再次讀取 | 尚未驗證 |
-| 不同真實會員的資料隔離 | 尚未驗證 |
+以上整合結果依開發者回報及既有測試報告記錄；本次文件更新沒有重跑測試或連線資料庫。
 
 ### 完成範圍與限制
 
-- **已完成**：通知模型、收件人限定查詢與排序、安全 DTO、登入整合、會員不存在處理、內部建立通知服務。
-- **已測試**：7 項 Mock 測試，以及上述手動資料的 Atlas 讀取驗證。
-- **尚未驗證**：上表所列項目，以及相同建立時間的 ID 排序與查詢效能。Mock HTTP 測試本身不涵蓋完整帳密登入。
-- **尚未實作或串接**：通知前端、結標／出價／訂單／聊天自動通知、推播或輪詢、已讀 API、未讀數量、分頁、複合索引、保存期限及可靠重試／防重複。
-- 手動插入通知**不代表自動競標通知或 FR-M-07 已完成**。正常啟動不會自動建立測試通知，也沒有初始化 Java 類別或公開測試資料 API。
-- `readAt` 僅為預留欄位，不代表已完成已讀功能或 FR-M-09 聊天室未讀紅點。
+- **已完成的後端**：三支 HTTP API、安全回應 DTO、五種標準類型、共用建立方法與四種便利方法。
+- **尚待驗證**：Spring Boot 重啟後再次讀取、不同真實會員隔離、相同建立時間的 ID 實際排序及查詢效能。
+- **尚未實作或串接**：通知前端、結標／出價／訂單／聊天事件觸發、推播或輪詢、未讀數量、分頁、複合索引、保存期限及可靠重試／防重複。
+- 手動整合測試通過**不代表自動競標通知或 FR-M-07 已完成**；正常啟動不會建立測試通知，也沒有公開建立通知 API。
+- 通知已讀 API 不代表已完成 FR-M-09 的聊天室未讀紅點。
 
 ## 8. 相關檔案
 
@@ -230,11 +265,15 @@ Set-Location backend
 | --- | --- |
 | `Notification.java` | MongoDB 通知資料模型。 |
 | `NotificationRepository.java` | 收件人條件與排序查詢。 |
+| `NotificationReadRepository.java`、`NotificationReadRepositoryImpl.java` | 本人通知的條件已讀更新。 |
+| `NotificationType.java` | 五種標準通知類型。 |
 | `NotificationService.java` | 內部建立通知與查詢。 |
-| `NotificationController.java` | GET API 與會員身分解析。 |
+| `NotificationController.java` | GET 與兩支 PATCH API、登入會員身分解析。 |
 | `NotificationView.java` | 對外回應 DTO。 |
 
 測試目錄：`backend/src/test/java/com/NTOUMarketplace/backend/notification/`
 
 - `NotificationHttpTests.java`：HTTP 存取控制與回應測試。
 - `NotificationServiceTests.java`：Service 與 Repository 查詢契約測試。
+- `NotificationReadRepositoryTests.java`：已讀更新條件與冪等測試。
+- `NotificationAtlasManualTests.java`：預設停用的 Atlas 手動整合測試。

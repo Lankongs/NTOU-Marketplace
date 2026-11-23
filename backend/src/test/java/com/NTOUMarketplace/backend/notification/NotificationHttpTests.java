@@ -22,13 +22,17 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
-/** 使用真實 SecurityFilterChain 與 Mock Session，不載入 Boot 或連線資料庫。 */
+// 使用既有安全設定與 Mock Session 測試，不連線資料庫
 class NotificationHttpTests {
     private AnnotationConfigWebApplicationContext context;
     private MockMvc mvc;
@@ -38,10 +42,17 @@ class NotificationHttpTests {
     @Configuration
     @EnableWebMvc
     @EnableWebSecurity
-    @Import({SecurityConfig.class, NotificationController.class, NotificationService.class})
+    @Import({SecurityConfig.class, NotificationController.class, NotificationService.class, TestCsrfController.class})
     static class TestConfig {
         @Bean MemberRepository memberRepository() { return mock(MemberRepository.class); }
         @Bean NotificationRepository notifications() { return mock(NotificationRepository.class); }
+    }
+
+    // 測試用 GET，透過既有 CSRF filter 產生驗證資料
+    @RestController
+    static class TestCsrfController {
+        @GetMapping("/api/auth/csrf")
+        public void csrf(CsrfToken csrf) { csrf.getToken(); }
     }
 
     @BeforeEach
@@ -55,9 +66,9 @@ class NotificationHttpTests {
         members = context.getBean(MemberRepository.class);
         repository = context.getBean(NotificationRepository.class);
         when(members.find("member-a")).thenReturn(Optional.of(
-            new MemberRepository.Member(1L, "member-a", "會員甲", "unused")));
+            new MemberRepository.Member(1L, "member-a", "會員甲", "unused", null, null)));
         when(members.find("member-b")).thenReturn(Optional.of(
-            new MemberRepository.Member(2L, "member-b", "會員乙", "unused")));
+            new MemberRepository.Member(2L, "member-b", "會員乙", "unused", null, null)));
     }
 
     @AfterEach
@@ -66,7 +77,7 @@ class NotificationHttpTests {
         context.close();
     }
 
-    /** 建立測試 Session 身分，避免使用真實帳密或任何 Atlas 資料。 */
+    // 建立測試用的登入 Session
     private MockHttpSession session(String account) {
         var security = SecurityContextHolder.createEmptyContext();
         security.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
@@ -74,6 +85,69 @@ class NotificationHttpTests {
         var session = new MockHttpSession();
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, security);
         return session;
+    }
+
+    // 取得 CSRF 驗證資料後送出 PATCH 請求
+    private MockHttpServletRequestBuilder patch(String path, MockHttpSession session) throws Exception {
+        var request = mvc.perform(MockMvcRequestBuilders.get("/api/auth/csrf").session(session))
+            .andReturn().getRequest();
+        var csrf = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+        return MockMvcRequestBuilders.patch(path).session(session)
+            .header(csrf.getHeaderName(), csrf.getToken());
+    }
+
+    @Test
+    void patchRequiresAuthenticationAndCsrf() throws Exception {
+        for (String path : List.of("/api/notifications/own/read", "/api/notifications/read-all")) {
+            assertEquals(401, mvc.perform(patch(path, new MockHttpSession())).andReturn().getResponse().getStatus());
+            assertEquals(403, mvc.perform(MockMvcRequestBuilders.patch(path)
+                .session(session("member-a"))).andReturn().getResponse().getStatus());
+            assertEquals(403, mvc.perform(patch(path, session("member-a")).with(request -> {
+                request.removeHeader("X-CSRF-TOKEN");
+                request.addHeader("X-CSRF-TOKEN", "invalid");
+                return request;
+            })).andReturn().getResponse().getStatus());
+        }
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void readOneIsIdempotentAndCannotTargetOtherMembers() throws Exception {
+        when(repository.markRead(eq("own"), eq(1L), any(Instant.class))).thenReturn(true);
+        var a = session("member-a");
+        for (int i = 0; i < 2; i++) {
+            assertEquals(204, mvc.perform(patch("/api/notifications/own/read", a)
+                .param("recipientId", "2")).andReturn().getResponse().getStatus());
+        }
+        assertEquals(404, mvc.perform(patch("/api/notifications/own/read", session("member-b")))
+            .andReturn().getResponse().getStatus());
+        assertEquals(404, mvc.perform(patch("/api/notifications/missing/read", a))
+            .andReturn().getResponse().getStatus());
+        verify(repository, times(2)).markRead(eq("own"), eq(1L), any(Instant.class));
+        verify(repository).markRead(eq("own"), eq(2L), any(Instant.class));
+    }
+
+    @Test
+    void readAllIsScopedToSessionAndEmptyInboxIsSuccessful() throws Exception {
+        var a = session("member-a");
+        for (int i = 0; i < 2; i++) {
+            var response = mvc.perform(patch("/api/notifications/read-all", a)
+                .param("recipientId", "2")).andReturn().getResponse();
+            assertEquals(204, response.getStatus());
+            assertEquals("", response.getContentAsString());
+        }
+        verify(repository, times(2)).markAllRead(eq(1L), any(Instant.class));
+        verify(repository, never()).markAllRead(eq(2L), any(Instant.class));
+    }
+
+    @Test
+    void deletedMemberCannotMarkNotificationsRead() throws Exception {
+        when(members.find("removed")).thenReturn(Optional.empty());
+        for (String path : List.of("/api/notifications/own/read", "/api/notifications/read-all")) {
+            assertEquals(401, mvc.perform(patch(path, session("removed")))
+                .andReturn().getResponse().getStatus());
+        }
+        verifyNoInteractions(repository);
     }
 
     @Test
@@ -90,7 +164,7 @@ class NotificationHttpTests {
             new Notification(1L, "ORDER", "ONLY_A", "甲的通知", Instant.now(), null, null)));
         when(repository.findByRecipientIdOrderByCreatedAtDescIdDesc(2L)).thenReturn(List.of(
             new Notification(2L, "ORDER", "ONLY_B", "乙的通知", Instant.now(), null, null)));
-        // 即使傳入其他會員 ID，Controller 仍只相信 Session 身分。
+        // 傳入其他會員 ID 時，仍只查詢登入會員的通知
         var a = mvc.perform(MockMvcRequestBuilders.get("/api/notifications")
             .param("recipientId", "2").session(session("member-a"))).andReturn().getResponse();
         var b = mvc.perform(MockMvcRequestBuilders.get("/api/notifications")

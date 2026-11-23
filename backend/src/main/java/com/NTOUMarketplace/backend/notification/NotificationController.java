@@ -6,11 +6,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-/** 通知中心僅提供目前登入會員的通知。 */
+// 查詢目前登入會員的通知
 @RestController
 @RequestMapping("/api/notifications")
 public class NotificationController {
@@ -22,16 +25,34 @@ public class NotificationController {
         this.members = members;
     }
 
-    /** 不接受收件人參數，避免冒用其他會員的 ID。 */
+    // 只使用登入會員 ID，不接受前端指定收件人
     @GetMapping
     public List<NotificationView> getNotifications(Authentication auth) {
+        return notifications.getNotifications(memberId(auth)).stream()
+            .map(NotificationView::from).toList();
+    }
+
+    // PATCH 請求需通過登入與 CSRF 檢查
+    @PatchMapping("/{id}/read")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void markRead(@PathVariable String id, Authentication auth) {
+        notifications.markRead(memberId(auth), id);
+    }
+
+    // 將自己的通知全部設為已讀，沒有通知也回傳成功
+    @PatchMapping("/read-all")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void markAllRead(Authentication auth) {
+        notifications.markAllRead(memberId(auth));
+    }
+
+    private long memberId(Authentication auth) {
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "請先登入。");
         }
-        // Session 的帳號才是可信任身分；會員已移除時明確回應 401。
+        // 根據登入帳號查詢會員，不存在時回傳 401
         var member = members.find(auth.getName()).orElseThrow(() ->
             new ResponseStatusException(HttpStatus.UNAUTHORIZED, "會員已不存在，請重新登入。"));
-        return notifications.getNotifications(member.id()).stream()
-            .map(NotificationView::from).toList();
+        return member.id();
     }
 }
