@@ -87,7 +87,7 @@ List<Notification> findByRecipientIdOrderByCreatedAtDescIdDesc(Long recipientId)
 
 目前沒有自訂複合索引建立邏輯，也沒有分頁或筆數上限；Atlas 既有索引未確認。
 
-## 5. 內部通知建立服務
+## 5. 內部通知建立服務（供直購、訂單、競標等模組使用）
 
 實際方法簽章位於 `NotificationService.java`：
 
@@ -101,6 +101,8 @@ public Notification createNotification(
     String targetId
 )
 ```
+
+`NotificationService.createNotification()` 為共用通知建立方法，並不限於競標功能。其他後端模組可於業務事件成功完成後呼叫，例如直購訂單建立、訂單狀態更新、競標結束等。通知模組負責儲存與查詢通知，事件發生時機、收件人及內容由各業務模組決定。目前尚未自動串接上述事件。
 
 | 項目 | 規則 |
 | --- | --- |
@@ -139,6 +141,21 @@ public void notifyWinner(Long winnerId, String productId) {
 呼叫端需匯入 `com.NTOUMarketplace.backend.notification.NotificationService`。`AUCTION_WON`、`PRODUCT` 是範例約定，目前沒有 enum 強制或對應的自動跳轉功能。
 
 FR-M-07 的結標通知由競標模組負責觸發。競標模組須根據實際結標結果，分別決定賣家與得標買家的通知內容及收件人，並避免重複結標造成重複通知。通知模組負責儲存與查詢；無人出價、失敗重試與防重複仍待整合，此方法不會自動與競標結果組成交易，也不提供可靠投遞保證。
+
+直購訂單建立成功後，也可使用同一服務通知賣家。以下僅為**未來整合示意，尚未串接訂單事件**：
+
+```java
+notificationService.createNotification(
+    sellerId,
+    "ORDER_PLACED",
+    "收到新訂單",
+    "你的商品已有人下單，請查看訂單詳情。",
+    "ORDER",
+    orderId
+);
+```
+
+`sellerId` 必須是後端確認的賣家會員 ID（`Long`），`orderId` 必須是實際持久化訂單的 ID（傳入 `String`）。`ORDER_PLACED`、`ORDER` 同樣只是範例約定。此片段不建立訂單，也不表示目前已有可用的訂單持久化流程；必須待訂單模組完成並成功建立真實訂單後才能串接，不可捏造 ID。
 
 ## 6. 前端串接範例
 
