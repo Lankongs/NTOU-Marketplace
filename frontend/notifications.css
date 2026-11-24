@@ -1,0 +1,291 @@
+/* 通知專用樣式，不覆蓋共用導覽列與 Bootstrap 元件 */
+.ntou-notification-button {
+  position: relative;
+}
+
+.ntou-notification-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 9px;
+  height: 9px;
+  background: #dc3545;
+  border: 2px solid #d5eeff;
+  border-radius: 50%;
+}
+
+.ntou-notification-menu {
+  position: fixed;
+  z-index: 1040;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #212529;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 12%);
+  font-family: system-ui, "Microsoft JhengHei", sans-serif;
+}
+
+.ntou-notification-menu[hidden],
+.ntou-notification-dot[hidden] {
+  display: none;
+}
+
+.ntou-notification-menu-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #eff8ff;
+  border-bottom: 1px solid #dee2e6;
+  flex-shrink: 0;
+}
+
+.ntou-notification-menu-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ntou-notification-menu-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  max-height: 430px;
+}
+
+.ntou-notification-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.ntou-notification-item {
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #edf0f2;
+  overflow-wrap: anywhere;
+}
+
+.ntou-notification-item:last-child {
+  border-bottom: 0;
+}
+
+.ntou-notification-item-unread {
+  background: #f0f8ff;
+}
+
+/* 下拉通知以右側紅點區分未讀，文字保持可換行 */
+.ntou-notification-menu .ntou-notification-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ntou-notification-menu-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ntou-notification-item-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #dc3545;
+}
+
+.ntou-notification-item-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.ntou-notification-unread-label {
+  flex-shrink: 0;
+  font-size: .75rem;
+  color: #0d6efd;
+}
+
+.ntou-notification-content {
+  margin: 5px 0;
+  font-size: .9rem;
+  color: #495057;
+  white-space: pre-wrap;
+}
+
+.ntou-notification-time {
+  font-size: .78rem;
+  color: #6c757d;
+}
+
+.ntou-notification-state {
+  padding: 28px 16px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.ntou-notification-state p {
+  margin: 0 0 10px;
+}
+
+.ntou-notification-menu-footer {
+  display: block;
+  flex-shrink: 0;
+  padding: 12px 16px;
+  text-align: center;
+  color: #0d6efd;
+  text-decoration: none;
+  border-top: 1px solid #dee2e6;
+}
+
+.ntou-notification-menu-footer:hover,
+.ntou-notification-menu-footer:focus-visible {
+  background: #eff8ff;
+  text-decoration: underline;
+}
+
+@media (max-width: 575.98px) {
+  .ntou-notification-menu-body {
+    max-height: 55vh;
+  }
+}
+
+/* 完整通知頁的樣式只作用於通知中心 */
+.ntou-notifications-page {
+  min-height: 100vh;
+  color: #212529;
+  font-family: system-ui, "Microsoft JhengHei", sans-serif;
+}
+
+.ntou-notifications-main {
+  max-width: 1000px;
+}
+
+.ntou-notifications-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ntou-notifications-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.ntou-notifications-toolbar > button {
+  flex-shrink: 0;
+}
+
+.ntou-notifications-page #notification-read-all:disabled {
+  color: #6c757d;
+  background-color: #e9ecef;
+  border-color: #ced4da;
+  opacity: 1;
+}
+
+.ntou-notifications-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px 24px;
+}
+
+.ntou-notifications-row.ntou-notification-item-unread {
+  border-left: 3px solid #0d6efd;
+  padding-left: 21px;
+}
+
+.ntou-notifications-details {
+  min-width: 0;
+  flex: 1;
+}
+
+.ntou-notifications-item-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.ntou-notification-item-unread .ntou-notifications-item-title {
+  font-weight: 700;
+}
+
+.ntou-notifications-read-label {
+  font-size: .75rem;
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
+.ntou-notifications-read-button {
+  flex-shrink: 0;
+}
+
+.ntou-notifications-status {
+  padding: 40px 24px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.ntou-notifications-notice {
+  margin: 16px 24px;
+  padding: 12px 16px;
+  color: #146c43;
+  background: #eaf6ef;
+  border-radius: 6px;
+}
+
+.ntou-notifications-notice-error {
+  color: #842029;
+  background: #fff0f1;
+}
+
+.ntou-notifications-notice[hidden] {
+  display: none;
+}
+
+/* 全部已讀的成功提示浮在右下角，不推動通知列表 */
+.ntou-notifications-notice.ntou-notifications-notice-floating {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1080;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+}
+
+@media (max-width: 575.98px) {
+  .ntou-notifications-toolbar {
+    padding: 20px 16px;
+  }
+
+  .ntou-notifications-toolbar > button {
+    width: 100%;
+  }
+
+  .ntou-notifications-row {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .ntou-notifications-row.ntou-notification-item-unread {
+    padding-left: 13px;
+  }
+
+  .ntou-notifications-notice {
+    margin: 16px;
+  }
+}

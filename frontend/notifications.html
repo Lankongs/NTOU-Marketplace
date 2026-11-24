@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>通知中心</title>
+    <link rel="stylesheet" href="style.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+    <link id="ntou-notification-styles" rel="stylesheet" href="notifications.css" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="./javascripts/topArea/initTop.js"></script>
+    <script type="module" src="./javascripts/auth/member.js"></script>
+    <script type="module" src="./javascripts/notification/notificationPage.js"></script>
+  </head>
+  <body class="ntou-notifications-page bg-light">
+    <!-- 共用導覽列由 initTop.js 建立 -->
+    <div id="top-navbar"></div>
+    <main class="ntou-notifications-main container py-4 py-md-5">
+      <a class="d-inline-block mb-3 text-decoration-none" href="./index.html">← 返回首頁</a>
+      <section class="ntou-notifications-card shadow-sm" aria-labelledby="notification-page-title">
+        <div class="ntou-notifications-toolbar">
+          <div>
+            <h1 id="notification-page-title" class="h3 fw-bold mb-2">通知中心</h1>
+            <p id="notification-summary" class="text-secondary small mb-0">查看你的最新通知與已讀狀態</p>
+          </div>
+          <button id="notification-read-all" type="button" class="btn btn-outline-primary" disabled>
+            全部標記已讀
+          </button>
+        </div>
+        <div id="notification-notice" class="ntou-notifications-notice" role="status" aria-live="polite" hidden></div>
+        <div id="notification-page-status" class="ntou-notifications-status" role="status" aria-live="polite">
+          <p id="notification-status-text">通知載入中…</p>
+          <a id="notification-login" class="btn btn-primary" href="./login.html" hidden>前往登入</a>
+          <button id="notification-retry" type="button" class="btn btn-outline-primary" hidden>重新載入</button>
+        </div>
+        <ul id="notification-page-list" class="ntou-notification-list" aria-label="全部通知" aria-busy="true"></ul>
+      </section>
+    </main>
+  </body>
+</html>
